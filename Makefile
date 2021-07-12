@@ -1,6 +1,6 @@
 
 
-build: draft-gondwana-jmap-blob.txt draft-gondwana-jmap-blob.html draft-gondwana-jmap-blob.xml
+build: draft-ietf-jmap-blob.txt draft-ietf-jmap-blob.html draft-ietf-jmap-blob.xml
 
 %.xml: %.mdown
 	mmark $< > $@

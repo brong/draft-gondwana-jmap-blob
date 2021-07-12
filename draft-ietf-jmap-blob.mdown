@@ -2,7 +2,7 @@
     title = "JMAP Blob management extension"
     abbrev = "JMAP Blob"
     category = "std"
-    docName = "draft-gondwana-jmap-blob-02"
+    docName = "draft-ietf-jmap-blob-00"
     updates = [8620]
     ipr= "trust200902"
     area = "Applications"
@@ -13,7 +13,7 @@
 
     [seriesInfo]
     name="Internet-Draft"
-    value="draft-gondwana-jmap-blob-02"
+    value="draft-ietf-jmap-blob-00"
     stream="IETF"
     status="standard"
 
