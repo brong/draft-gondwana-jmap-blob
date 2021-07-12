@@ -2,18 +2,18 @@
     title = "JMAP Blob management extension"
     abbrev = "JMAP Blob"
     category = "std"
-    docName = "draft-gondwana-jmap-blob-01"
+    docName = "draft-gondwana-jmap-blob-02"
     updates = [8620]
     ipr= "trust200902"
     area = "Applications"
     workgroup = "JMAP"
     keyword = ["jmap"]
 
-    date = 2020-11-16T00:00:00Z
+    date = 2021-07-12T00:00:00Z
 
     [seriesInfo]
     name="Internet-Draft"
-    value="draft-gondwana-jmap-blob-01"
+    value="draft-gondwana-jmap-blob-02"
     stream="IETF"
     status="standard"
 
@@ -39,8 +39,11 @@ The JMAP base protocol (RFC8620) provides the ability to upload and download
 arbitrary binary data via HTTP PUT and GET on defined endpoint.  This binary
 data is called a "Blob".
 
-This extension adds additional ways to handle Blobs, by making inline method
-calls within a standard JMAP request.
+This extension adds additional ways to create and access Blobs, by making
+inline method calls within a standard JMAP request.
+
+This extension also adds a reverse lookup mechanism to discover where blobs
+are referenced within other datatypes.
 
 {mainmatter}
 
@@ -54,7 +57,7 @@ JMAP method stream can reduce roundtrips.
 Likewise, when fetching an object, it can be useful to also fetch the raw
 content of that object without a separate roundtrip.
 
-Where JMAP is being proxied through a system which is providing additional
+Where JMAP is being proxied through a system which applies additional
 access restrictions, it can be useful to be able to see where a blob is
 referenced in order to decide whether to allow it to be downloaded.
 
@@ -86,7 +89,7 @@ Any one of:
 * data:asText: String|null
 * data:asBase64: String|null
 * data:asHex: String|null
-* catenate: [SetObject] *list of byte sources in order*
+* catenate: [SetObject] *list of octet sources in order*
 
 Also:
 
@@ -146,7 +149,6 @@ Method Call:
 
 Response:
 
-
 [ "Blob/set", {
   "accountId" : "account1",
   "created" : {
@@ -181,21 +183,62 @@ QUESTION: do we want to add range operators?
 * offset: UnsignedInt|null
 * length: UnsignedInt|null
 
-Returns that range of bytes (not characters!) from the blob
+Returns that range of octets (not characters!) from the blob.  Alternative
+possible syntax - ranges within the properties, e.g: `data:asText:0:3000`
 
 ## Blob/lookup
 
-A reverse lookup!
+Given a list of blobIds, this method does a reverse lookup in each of
+the provided datatypes to find the list of Ids within that datatype
+which reference the provided blob.
 
-Work to be done here, but something like this.
+The definition of reference is somewhat loosely defined, but roughly
+means "you could discover this blobId by looking inside this object",
+for example if a Mailbox contains an Email which references the blobId,
+then it references that blobId.  Likewise for a Thread.
 
-Map from blobId to object type:
+**Parameters**
+
+* accountId: "Id"
+
+  The id of the account used for the call.
+
+* datatypes: [String]
+
+  A list of datatype names from the "JMAP Datatypes" registry for which
+  "Can Reference Blobs" is "Yes".  The capability which defines each
+  type must also be requested.
+
+  If a datatype is not known by the server or the associated capability
+  has not been included then the server returns an "unknownDataType"
+  error.
+
+* ids: [Id]
+
+  A list of blobId values to be looked for.
+
+**Response**
+
+* list: [BlobInfo]
+
+  A list of BlobInfo objects.
+
+**BlobInfo Object**
+
+* id: Id
+
+  The Blob Identifier.
+
+* datatypes: DataType[Id List]
+
+  A map from datatype to list of Ids of that datatype (e.g. the datatype
+  "Email" maps to a list of emailIds)
 
 e.g.
 
 ```
 [ "Blob/lookup", {
-  "objects": ["Mailbox", "Thread", "Email"],
+  "datatypes": ["Mailbox", "Thread", "Email"],
   "ids": ["Gd2f81008cf07d2425418f7f02a3ca63a8bc82003",
           "G6f954bcb620f7f50fc8f21426bde3669da3d9067"]
 }, "R1" ]
@@ -208,19 +251,16 @@ Response:
   "list": [
     {
       "id": "Gd2f81008cf07d2425418f7f02a3ca63a8bc82003",
-      "Mailbox": ["M54e97373", Mcbe6b662"],
-      "Thread": ["T1530616e"],
-      "Email": ["E16e70a73eb4", "E84b0930cf16"]
-    },
+      "datatypes": {
+        "Mailbox": ["M54e97373", Mcbe6b662"],
+        "Thread": ["T1530616e"],
+        "Email": ["E16e70a73eb4", "E84b0930cf16"]
+      }
+    }
   ],
   "notFound": ["G6f954bcb620f7f50fc8f21426bde3669da3d9067"]
 }, "R1"]
 ```
-
-This tells which objects of each type "contain" a reference to
-that blobId.  "Contain" is defined somewhat losely here, so for
-example "the Mailbox contains an Email which references this
-blobId" is the standard in the response above, likewise for Thread.
 
 # Security considerations
 
@@ -231,9 +271,64 @@ that all JSON data be UTF-8 encoded, so servers MUST either return
 `data:asBase64` or `isEncodingProblem: true` and modify the data to be UTF-8
 safe.
 
+Servers MUST apply any access controls such that if the authenticated user would
+be unable to discover the blobId by making queries, then this fact can't be
+discovered via a Blob/lookup.  For example, if an Email exists in a Mailbox which
+the authenticated user does not have access to see, then that emailId MUST not be
+returned in a lookup for a blob which is referenced by that email.
+
+If a blob is not visible to a user at all, then the server SHOULD return that blobId
+in the notFound array, however it may also return an empty list for each datatype, as
+it may not be able to know if other datatypes do reference that blob.
+
 # IANA considerations
 
-TBD
+## JMAP Capability registration for "blob"
+
+IANA is requested to register the "blob" JMAP Capability as follows:
+
+Capability Name: urn:ietf:params:jmap:blob
+
+Specification document: this document
+
+Intended use: common
+
+Change Controller: IETF
+
+Security and privacy considerations: this document, Section XXX
+
+## JMAP Error Codes Registration for "unknownDataType"
+
+IANA is requested to register the "unknownDataType" JMAP Error Code as follows:
+
+JMAP Error Code: unknownDataType
+
+Intended use: common
+
+Change Controller: IETF
+
+Reference: this document
+
+Description: The server does not recognise this data type, or the capability to enable it was not present.
+
+
+## Creation of "JMAP Datatypes" Registry
+
+IANA is requested to create a new registry "JMAP Datatypes" with the initial content:
+
+| Datatype name | Can Reference Blobs | Can use for State Change | Capability | Reference
+| ------------- | ------------------- | ------------------------ | ---------  | ---------
+| Core          | No | No | urn:ietf:params:jmap:core | [@RFC8620]
+| PushSubscription | No | No | urn:ietf:params:jmap:core | [@RFC8620]
+| Mailbox       | Yes | Yes | urn:ietf:params:jmap:mail | [@RFC8621]
+| Thread        | Yes | Yes | urn:ietf:params:jmap:mail | [@RFC8621]
+| Email         | Yes | Yes | urn:ietf:params:jmap:mail | [@RFC8621]
+| EmailDelivery | No | Yes | urn:ietf:params:jmap:mail | [@RFC8621]
+| SearchSnippet  | No | No | urn:ietf:params:jmap:mail | [@RFC8621]
+| Identity       | No | Yes | urn:ietf:params:jmap:submission | [@RFC8621]
+| EmailSubmission | No | Yes | urn:ietf:params:jmap:submission | [@RFC8621]
+| VacationResponse | No | Yes | urn:ietf:params:jmap:vacationresponse | [@RFC8621]
+| MDN | No | No | urn:ietf:params:jmap:mdn | [RFC9007]
 
 # Acknowledgements
 
