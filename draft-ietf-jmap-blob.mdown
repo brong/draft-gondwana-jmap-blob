@@ -271,6 +271,10 @@ then it references that blobId.  Likewise for a Thread.
   A map from type name to list of Ids of that data type (e.g. the name
   "Email" maps to a list of emailIds)
 
+If a blob is not visible to a user at all, then the server SHOULD return that blobId
+in the notFound array, however it may also return an empty list for each type name,
+as it may not be able to know if other data types do reference that blob.
+
 e.g.
 
 ```
@@ -301,8 +305,6 @@ Response:
 
 # Security considerations
 
-TO BE IMPROVED:
-
 JSON parsers are not all consistent in handling non-UTF-8 data.  JMAP requires
 that all JSON data be UTF-8 encoded, so servers MUST either return
 `data:asBase64` or `isEncodingProblem: true` and modify the data to be UTF-8
@@ -314,9 +316,17 @@ discovered via a Blob/lookup.  For example, if an Email exists in a Mailbox whic
 the authenticated user does not have access to see, then that emailId MUST not be
 returned in a lookup for a blob which is referenced by that email.
 
-If a blob is not visible to a user at all, then the server SHOULD return that blobId
-in the notFound array, however it may also return an empty list for each datatype, as
-it may not be able to know if other datatypes do reference that blob.
+If a server might sometimes return all names empty rather than putting a
+blobId in the notFound response to a Blob/get, then the server SHOULD
+always return the same type of response, regardless of whether a blob
+exists but the user can't access it, or doesn't exist at all.  This
+avoids leaking information about the existence of the blob.
+
+The server MUST NOT trust that the data given to a Blob/set is a well formed
+instance of the specified media type, and if the server attempts to parse
+the given blob, only hardened parsers designed to deal with arbitrary untrusted
+data should be used.  The server SHOULD NOT reject data on the grounds that
+it is not a valid specimen of the stated type.
 
 # IANA considerations
 
