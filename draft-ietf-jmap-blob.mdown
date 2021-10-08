@@ -398,6 +398,6 @@ The source of this document exists on github at: https://github.com/brong/draft-
 
 # Acknowledgements
 
-TBD
+Alexey Melnikov, Ken Murchison, and the JMAP working group at the IETF.
 
 {backmatter}
