@@ -36,7 +36,7 @@
 .# Abstract
 
 The JMAP base protocol (RFC8620) provides the ability to upload and download
-arbitrary binary data via HTTP PUT and GET on defined endpoint.  This binary
+arbitrary binary data via HTTP POST and GET on defined endpoint.  This binary
 data is called a "Blob".
 
 This extension adds additional ways to create and access Blobs, by making
@@ -73,7 +73,7 @@ they appear in all capitals, as shown here.
 
 A blob is a sequence of zero or more octets.
 
-The JMAP base spec [@!RFC8210] defines the `Blob/copy` method, which
+The JMAP base spec [@!RFC8620] defines the `Blob/copy` method, which
 is unchanged by this specfication.
 
 ## Blob/set
