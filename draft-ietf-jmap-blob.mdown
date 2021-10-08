@@ -43,7 +43,7 @@ This extension adds additional ways to create and access Blobs, by making
 inline method calls within a standard JMAP request.
 
 This extension also adds a reverse lookup mechanism to discover where blobs
-are referenced within other datatypes.
+are referenced within other data types.
 
 {mainmatter}
 
@@ -84,7 +84,7 @@ This is a standard JMAP `set` method.
 
 **Properties:**
 
-Any one of:
+Exactly one of:
 
 * data:asText: String|null
 * data:asBase64: String|null
@@ -93,16 +93,16 @@ Any one of:
 
 Also:
 
-* type: String|null
+* type: String|null *hint for media type of the data*
 
 Result is:
 
 * id: Id the blobId
-* type: String|null *as given in the creation (if any); or detected from content; or null*
+* type: String|null *media type as given in the creation (if any); or detected from content; or null*
 * size: UnsignedInt *as per RFC8620 - the size of the file in Octets*
 
-Any other properties identical to those that would be returned in the JSON response of the
-RFC8620 upload endpoint.
+Any other properties identical to those that would be returned in the
+JSON response of the RFC8620 upload endpoint.
 
 SetObject:
 
@@ -122,12 +122,14 @@ OR a blobId source:
 
 ### update
 
-It is not possible to update a Blob, so any update will result in a `notUpdated` response.
+It is not possible to update a Blob, so any update will result
+in a `notUpdated` response.
 
 ### destroy
 
-If an uploaded Blob is not referenced by any persistent object, the server SHOULD destroy the object.
-Some systems use a content-based ID for blobs, so the server MAY respond `destroyed` and yet that
+If an uploaded Blob is not referenced by any persistent object, the
+server SHOULD destroy the object.  Some systems use a content-based
+ID for blobs, so the server MAY respond `destroyed` and yet that
 blobId still exist with the same content.
 
 Example:
@@ -166,16 +168,16 @@ Response:
 
 A standard JMAP get with two additional parameters:
 
-* offset: UnsignedInt|null - start this many octets into the blob data
-* length: UnsignedInt|null - return at most this many octets of the blob data
+* offset: UnsignedInt|null *start this many octets into the blob data*
+* length: UnsignedInt|null *return at most this many octets of the blob data*
 
 **Properties:**
 
 Any of
 
-* data:asText
-* data:asBase64
-* data:asHex
+* data:asText - *the raw octets of the selected range - NOTE that they must be able to be represented as utf8 in the JSON response*
+* data:asBase64 - *the octets of the selected range encoded as base64*
+* data:asHex - *the octets of the selected range encoded as lowercase hexadecimal (0-9, a-f)*
 * data *selects data:asText if the content is UTF-8, or data:asBase64*
 * size
 
@@ -185,8 +187,6 @@ The size value is always the number of octets in the blob, regardless of
 offset and length, while all the data fields contain just the octets
 within the selected range.  If there are no octets within the selected
 range, the data fields will be the empty string.
-
-data:asHex - lowercase hexadecimal (0-9, a-f)
 
 Example (a blob containing the string "The quick brown fox jumped over
 the lazy dog!")
@@ -225,8 +225,8 @@ Response:
 ## Blob/lookup
 
 Given a list of blobIds, this method does a reverse lookup in each of
-the provided datatypes to find the list of Ids within that datatype which
-reference the provided blob.
+the provided type names to find the list of Ids within that data type
+which reference the provided blob.
 
 The definition of reference is somewhat loosely defined, but roughly
 means "you could discover this blobId by looking inside this object",
@@ -241,12 +241,13 @@ then it references that blobId.  Likewise for a Thread.
 
 * types: [String]
 
-  A list of datatype names from the "JMAP Datatypes" registry for which
-  "Can Reference Blobs" is "Yes".  The capability which defines each
-  type must also be requested.
+  A list of type names from the "JMAP Data Types" registry.  Only names
+  for which "Can Reference Blobs" is true may be specified, and the
+  capability which defines each type must also be used by the overall
+  JMAP request in which this method is called.
 
-  If a datatype is not known by the server or the associated capability
-  has not been included then the server returns an "unknownDataType"
+  If a type name is not known by the server, or the associated capability
+  has not been requested, then the server returns an "unknownDataType"
   error.
 
 * ids: [Id]
@@ -265,9 +266,9 @@ then it references that blobId.  Likewise for a Thread.
 
   The Blob Identifier.
 
-* types: DataType[Id List]
+* types: String[Id List]
 
-  A map from datatype to list of Ids of that datatype (e.g. the datatype
+  A map from type name to list of Ids of that data type (e.g. the name
   "Email" maps to a list of emailIds)
 
 e.g.
@@ -348,11 +349,11 @@ Reference: this document
 Description: The server does not recognise this data type, or the capability to enable it was not present.
 
 
-## Creation of "JMAP Datatypes" Registry
+## Creation of "JMAP Data Types" Registry
 
-IANA is requested to create a new registry "JMAP Datatypes" with the initial content:
+IANA is requested to create a new registry "JMAP Data Types" with the initial content:
 
-| Datatype name | Can Reference Blobs | Can use for State Change | Capability | Reference
+| Type Name | Can Reference Blobs | Can use for State Change | Capability | Reference
 | ------------- | ------------------- | ------------------------ | ---------  | ---------
 | Core          | No | No | urn:ietf:params:jmap:core | [@RFC8620]
 | PushSubscription | No | No | urn:ietf:params:jmap:core | [@RFC8620]
