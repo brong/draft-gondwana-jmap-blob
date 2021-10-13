@@ -2,18 +2,18 @@
     title = "JMAP Blob management extension"
     abbrev = "JMAP Blob"
     category = "std"
-    docName = "draft-ietf-jmap-blob-02"
+    docName = "draft-ietf-jmap-blob-03"
     updates = [8620]
     ipr= "trust200902"
     area = "Applications"
     workgroup = "JMAP"
     keyword = ["jmap"]
 
-    date = 2021-10-08T00:00:00Z
+    date = 2021-10-13T00:00:00Z
 
     [seriesInfo]
     name="Internet-Draft"
-    value="draft-ietf-jmap-blob-02"
+    value="draft-ietf-jmap-blob-03"
     stream="IETF"
     status="standard"
 
@@ -62,19 +62,72 @@ access restrictions, it can be useful to be able to see where a blob is
 referenced in order to decide whether to allow it to be downloaded.
 
 # Conventions Used In This Document
-
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
 NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED",
 "MAY", and "OPTIONAL" in this document are to be interpreted as
 described in BCP 14 [@!RFC2119] [@!RFC8174] when, and only when,
 they appear in all capitals, as shown here.
 
-# Blobs
+# Additions to the Capabilities Object
+
+The capabilities object is returned as part of the JMAP Session
+object; see [@!RFC8620], Section 2.
+
+This document defines an additional capability URI.
+
+## urn:ietf:params:jmap:blob
+
+This represents support for additional API methods on the Blob datatype.
+
+The value of this property in the JMAP session "capabilities" property
+is an empty object.
+
+The value of this property in an account's "accountCapabilities"
+property is an object that MAY contain the following information on
+server capabilities and permissions for that account:
+
+* "maxSizeBlobSet": UnsignedInt - if set, gives the maximum size of a blob
+  that the server will allow you to create (including with catenate)
+
+* "supportedTypeNames": [String] - an array of data type names that are
+  supported for `Blob/lookup`.
+
+Example:
+
+```
+{
+  "capabilities": {
+    ...,
+    "urn:ietf:params:jmap:blob": {}
+  },
+  "accounts": {
+    "A13842": {
+      ...
+      "accountCapabilities": {
+        "urn:ietf:params:jmap:blob": {
+          "maxSizeBlobSet": 50000000,
+          "supportedTypeNames" : [
+            "Mailbox",
+            "Thread",
+            "Email"
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+# Blob Methods
 
 A blob is a sequence of zero or more octets.
 
 The JMAP base spec [@!RFC8620] defines the `Blob/copy` method, which
-is unchanged by this specfication.
+is unchanged by this specfication, and is selected by the
+`urn:ietf:params:jmap:core` capability.
+
+The following JMAP Methods are selected by the
+`urn:ietf:params:jmap:blob` capability.
 
 ## Blob/set
 
@@ -382,6 +435,10 @@ IANA is requested to create a new registry "JMAP Data Types" with the initial co
 EDITOR: please remove this section before publication.
 
 The source of this document exists on github at: https://github.com/brong/draft-gondwana-jmap-blob/
+
+**draft-ieft-jmap-blob-03**:
+
+- added capabilities object
 
 **draft-ieft-jmap-blob-02**:
 
