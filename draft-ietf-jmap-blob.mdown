@@ -68,7 +68,7 @@ NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED",
 described in BCP 14 [@!RFC2119] [@!RFC8174] when, and only when,
 they appear in all capitals, as shown here.
 
-# Additions to the Capabilities Object
+# Addition to the Capabilities Object
 
 The capabilities object is returned as part of the JMAP Session
 object; see [@!RFC8620], Section 2.
@@ -87,7 +87,12 @@ property is an object that MAY contain the following information on
 server capabilities and permissions for that account:
 
 * "maxSizeBlobSet": UnsignedInt - if set, gives the maximum size of a blob
-  that the server will allow you to create (including with catenate)
+  that the server will allow you to create (including with catenate).
+  This SHOULD be the same as the RFC8620 value `maxSizeUpload`.
+
+* "maxCatenateItems": UnsignedInt - if set, gives the maximum number of
+  of CatenateSourceObjects allowed per creation in a Blob/set.  Servers
+  SHOULD allow at least 64 items.
 
 * "supportedTypeNames": [String] - an array of data type names that are
   supported for `Blob/lookup`.
@@ -106,6 +111,7 @@ Example:
       "accountCapabilities": {
         "urn:ietf:params:jmap:blob": {
           "maxSizeBlobSet": 50000000,
+          "maxCatenateItems": 100,
           "supportedTypeNames" : [
             "Mailbox",
             "Thread",
@@ -142,36 +148,53 @@ Exactly one of:
 * data:asText: String|null
 * data:asBase64: String|null
 * data:asHex: String|null
-* catenate: [SetObject] *list of octet sources in order*
+* catenate: [CatenateSourceObject] *list of one or more octet sources in order*
 
 Also:
 
 * type: String|null *hint for media type of the data*
 
 Result is:
-
-* id: Id the blobId
+* id: Id *the blobId*
 * type: String|null *media type as given in the creation (if any); or detected from content; or null*
-* size: UnsignedInt *as per RFC8620 - the size of the file in Octets*
+* size: UnsignedInt *as per RFC8620 - the size of the blob in Octets*
 
 Any other properties identical to those that would be returned in the
 JSON response of the RFC8620 upload endpoint.
 
-SetObject:
+CatenateSourceObject:
 
-Any one of
+Exactly one of:
 
 * data:asText: String|null
-
 * data:asBase64: String|null
-
 * data:asHex: String|null
 
-OR a blobId source:
+or a blobId source:
 
 * blobId: Id
-* offset: UnsignedInt|null
-* length: UnsignedInt|null
+* offset: UnsignedInt|null *may be zero*
+* length: UnsignedInt|null *must not be zero*
+
+If `null` then offset is assumed to be zero.  If `null` then
+length is the remaining octets in the blob.  If the range can
+not be fully satisfied (i.e. extends past the end of the data
+in the blob) then the catenate itself is invalid and results in
+a notCreated response for this creation id.
+
+If the data properties or catenate properties have any invalid references
+or invalid data contained in them, the server MUST NOT guess as to the
+user's intent, and MUST reject the creation and return a notCreated
+response for that creation id.
+
+Likewise, invalid data in the base64 or hex fields is an error
+and must result in a notCreated response for this creation id.
+
+It is legal to create a blob by calling catenate with a single
+CatenateSourceObject.  Please note that a catenate source can not
+contain additional sub-catenates, only data or blob sources.
+
+A server SHOULD accept at least 64 catenate items.
 
 ### update
 
@@ -214,7 +237,6 @@ Response:
     },
   },
 }, "R1" ]
-
 ```
 
 ## Blob/get
@@ -224,22 +246,43 @@ A standard JMAP get with two additional parameters:
 * offset: UnsignedInt|null *start this many octets into the blob data*
 * length: UnsignedInt|null *return at most this many octets of the blob data*
 
-**Properties:**
+**Request Properties:**
 
 Any of
 
-* data:asText - *the raw octets of the selected range - NOTE that they must be able to be represented as utf8 in the JSON response*
-* data:asBase64 - *the octets of the selected range encoded as base64*
-* data:asHex - *the octets of the selected range encoded as lowercase hexadecimal (0-9, a-f)*
-* data *selects data:asText if the content is UTF-8, or data:asBase64*
+* data:asText
+* data:asBase64
+* data:asHex
+* data *selects data:asText if the content is valid UTF-8, or data:asBase64*
 * size
 
-If not given, returns `data` and `size`.
+If not given, properties defaults to `data` and `size`.
 
-The size value is always the number of octets in the blob, regardless of
-offset and length, while all the data fields contain just the octets
-within the selected range.  If there are no octets within the selected
-range, the data fields will be the empty string.
+**Result Properties:**
+
+* data:asText: String|null *the raw octets of the selected range if they are valid utf-8, otherwise null*
+* data:asBase64: String *the base64 encoding of the selected range*
+* data:asHex: String *the octets of the selected range encoded as lowercase hexadecimal (0-9, a-f)*
+* isEncodingProblem: Boolean *(default: false)*
+* isTruncated: Boolean *(default: false)*
+* size: UnsignedInt *the number of octets in the entire blob, regardless of offset/length selectors*
+
+The size value is always the number of octets in the entire blob,
+regardless of offset and length.
+
+The data fields contain a representation of the octets within the selected
+range that are present in the blob.  If the octets selected are not valid
+utf-8 (including truncating in the middle of a multi-octet sequence)
+and `data:asText` or `data` is selected, then the key `isEncodingProblem`
+is set to `true` and the `data:asText` value is `null`.  In the case where
+`data` was requested, this also causes `data:asBase64` to be returned.
+
+If the selected range requests data outside the blob (i.e. the offset+length
+is larger than the blob) then the result is either just the octets from the
+offset to the end of the blob, or an empty string if the offset is past the
+end of the blob.  Either way, the `isTruncated` property in the result is
+set to `true` to tell the client that the requested range could not be
+fully satisfied.
 
 Example (a blob containing the string "The quick brown fox jumped over
 the lazy dog!")
@@ -439,6 +482,10 @@ The source of this document exists on github at: https://github.com/brong/draft-
 **draft-ieft-jmap-blob-03**:
 
 - added capabilities object
+- renamed types to typeNames and matchedIds
+- added details of how to handle non-UTF8 data and truncation in Blob/get
+- added isTruncated and isEncodingProblem to Blob/get to tell the client
+  if the request wasn't entirely satisfied.
 
 **draft-ieft-jmap-blob-02**:
 
