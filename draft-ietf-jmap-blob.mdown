@@ -485,6 +485,10 @@ EDITOR: please remove this section before publication.
 
 The source of this document exists on github at: https://github.com/brong/draft-gondwana-jmap-blob/
 
+**draft-ieft-jmap-blob-04**:
+
+- added security considerations for scanning `catenate` results
+
 **draft-ieft-jmap-blob-03**:
 
 - added capabilities object
