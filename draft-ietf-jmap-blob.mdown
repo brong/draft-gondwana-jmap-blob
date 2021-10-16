@@ -9,7 +9,7 @@
     workgroup = "JMAP"
     keyword = ["jmap"]
 
-    date = 2021-10-17T00:00:00Z
+    date = 2021-10-16T00:00:01Z
 
     [seriesInfo]
     name="Internet-Draft"
