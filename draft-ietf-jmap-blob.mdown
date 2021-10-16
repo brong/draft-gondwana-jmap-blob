@@ -2,18 +2,18 @@
     title = "JMAP Blob management extension"
     abbrev = "JMAP Blob"
     category = "std"
-    docName = "draft-ietf-jmap-blob-03"
+    docName = "draft-ietf-jmap-blob-04"
     updates = [8620]
     ipr= "trust200902"
     area = "Applications"
     workgroup = "JMAP"
     keyword = ["jmap"]
 
-    date = 2021-10-16T00:00:00Z
+    date = 2021-10-17T00:00:00Z
 
     [seriesInfo]
     name="Internet-Draft"
-    value="draft-ietf-jmap-blob-03"
+    value="draft-ietf-jmap-blob-04"
     stream="IETF"
     status="standard"
 
@@ -423,6 +423,12 @@ instance of the specified media type, and if the server attempts to parse
 the given blob, only hardened parsers designed to deal with arbitrary untrusted
 data should be used.  The server SHOULD NOT reject data on the grounds that
 it is not a valid specimen of the stated type.
+
+Blob/set catenate can be used to recreate dangerous content on the far side of
+security scanners (anti-virus or exfiltration scanners for example) which may be
+watching the upload endpoint.  Server implementations SHOULD provide a hook to
+allow security scanners to check the resulting blobId from a catenate in the
+same way that they do for the upload endpoint.
 
 # IANA considerations
 
