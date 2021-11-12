@@ -2,18 +2,18 @@
     title = "JMAP Blob management extension"
     abbrev = "JMAP Blob"
     category = "std"
-    docName = "draft-ietf-jmap-blob-05"
+    docName = "draft-ietf-jmap-blob-06"
     updates = [8620]
     ipr= "trust200902"
     area = "Applications"
     workgroup = "JMAP"
     keyword = ["jmap"]
 
-    date = 2021-10-26T00:00:01Z
+    date = 2021-11-12T00:00:01Z
 
     [seriesInfo]
     name="Internet-Draft"
-    value="draft-ietf-jmap-blob-05"
+    value="draft-ietf-jmap-blob-06"
     stream="IETF"
     status="standard"
 
@@ -57,11 +57,17 @@ JMAP method stream can reduce roundtrips.
 Likewise, when fetching an object, it can be useful to also fetch the raw
 content of that object without a separate roundtrip.
 
+Since raw blobs could contain arbitrary binary data, this document allows
+the use of the base64 coding specified in [@!RFC4648] for transfer of binary
+data.
+
 Where JMAP is being proxied through a system which applies additional
-access restrictions, it can be useful to be able to see where a blob is
-referenced in order to decide whether to allow it to be downloaded.
+access restrictions, it can be useful to know where a blob is referenced
+in order to decide whether to allow it to be downloaded, so this document
+defines a way to look up where a particular blobId is referenced.
 
 # Conventions Used In This Document
+
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
 NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED",
 "MAY", and "OPTIONAL" in this document are to be interpreted as
@@ -87,7 +93,8 @@ property is an object that MAY contain the following information on
 server capabilities and permissions for that account:
 
 * "maxSizeBlobSet": UnsignedInt - if set, gives the maximum size of a blob
-  that the server will allow you to create (including with catenate).
+  in octets that the server will allow you to create (size of the final
+  output of catenate or of encoded forms).
   This SHOULD be the same as the RFC8620 value `maxSizeUpload`.
 
 * "maxCatenateItems": UnsignedInt - if set, gives the maximum number of
@@ -146,9 +153,8 @@ This is a standard JMAP `set` method.
 
 Exactly one of:
 
-* data:asText: String|null
-* data:asBase64: String|null
-* data:asHex: String|null
+* data:asText: String|null *data which can be represented as utf-8 encoded text*
+* data:asBase64: String|null *binary data encoded as a ([@!RFC4648] Section 4) Base 64 string*
 * catenate: [CatenateSourceObject] *list of one or more octet sources in order*
 
 Also:
@@ -156,12 +162,16 @@ Also:
 * type: String|null *hint for media type of the data*
 
 Result is:
+
 * id: Id *the blobId*
 * type: String|null *media type as given in the creation (if any); or detected from content; or null*
-* size: UnsignedInt *as per RFC8620 - the size of the blob in Octets*
+* size: UnsignedInt *as per RFC8620 - the size of the created blob in octets*
 
 Any other properties identical to those that would be returned in the
-JSON response of the RFC8620 upload endpoint.
+JSON response of the RFC8620 upload endpoint (which may be extended in
+the future - this document anticipates that implementations will
+extend both the upload endpoint and the Blob/set responses in the
+same way)
 
 CatenateSourceObject:
 
@@ -169,7 +179,6 @@ Exactly one of:
 
 * data:asText: String|null
 * data:asBase64: String|null
-* data:asHex: String|null
 
 or a blobId source:
 
@@ -188,13 +197,15 @@ or invalid data contained in them, the server MUST NOT guess as to the
 user's intent, and MUST reject the creation and return a notCreated
 response for that creation id.
 
-Likewise, invalid characters in the base64 or hex sources, or invalid UTF-8
-in data:asText is an error and must result in a notCreated response
-for this creation id.
+Likewise, invalid characters in the base64 of data:asBase64, or invalid
+UTF-8 in data:asText are an error.
 
 It is legal to create a blob by calling catenate with a single
 CatenateSourceObject.  Please note that a catenate source can not
 contain additional sub-catenates, only data or blob sources.
+
+It is envisaged that catenate sources might be extended in future,
+for example to fetch external content.
 
 A server SHOULD accept at least 64 catenate items.
 
@@ -205,40 +216,49 @@ in a `notUpdated` response.
 
 ### destroy
 
-If an uploaded Blob is not referenced by any persistent object, the
-server SHOULD destroy the object.  Some systems use a content-based
-ID for blobs, so the server MAY respond `destroyed` and yet that
-blobId still exist with the same content.
+It is not possible to destroy a Blob, so any destroy will result
+in a `notDestroyed` response.
 
-Example:
+## Blob/set examples
+
+(note: data wrapped for publication here - the data:asBase64 would be
+a continuous string with no whitespace on the wire)
 
 ```
 Method Call:
 
-[ "Blob/set", {
-  "accountId" : "account1",
-  "create" : {
-    "1": {
-      "data:asBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKA
-                        AAAA1BMVEX/AAAZ4gk3AAAAAXRSTlN/gFy0ywAAAApJRE
-                        FUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII=",
-      "type" : "image/png"
+[
+  "Blob/set",
+  {
+    "accountId": "account1",
+    "create": {
+      "1": {
+        "data:asBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKA
+                          AAAA1BMVEX/AAAZ4gk3AAAAAXRSTlN/gFy0ywAAAApJRE
+                          FUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII=",
+        "type": "image/png"
+      },
     },
   },
-}, "R1" ]
+  "R1"
+]
 
 Response:
 
-[ "Blob/set", {
-  "accountId" : "account1",
-  "created" : {
-    "1": {
-      "id" : "G4c6751edf9dd6903ff54b792e432fba781271beb",
-      "type" : "image/png",
-      "size" : 95
+[
+  "Blob/set",
+  {
+    "accountId" : "account1",
+    "created" : {
+      "1": {
+        "id" : "G4c6751edf9dd6903ff54b792e432fba781271beb",
+        "type" : "image/png",
+        "size" : 95
+      },
     },
   },
-}, "R1" ]
+  "R1"
+]
 ```
 
 Complex catenate example:
@@ -273,7 +293,7 @@ Method Calls:
               "offset": 3
             },
             {
-              "data:asHex": "7761732074"
+              "data:asText": "was t"
             },
             {
               "blobId": "#b4",
@@ -316,7 +336,6 @@ Responses:
           "id": "Gc0854fb9fb03c41cce3802cb0d220529e6eef94e",
           "blobId": "Gc0854fb9fb03c41cce3802cb0d220529e6eef94e",
           "size": 45,
-          "expires": "2021-10-21T05:34:47Z",
           "type": "application/octet-stream"
         }
       },
@@ -338,7 +357,6 @@ Responses:
           "id": "Gcc60576f036321ae6e8037ffc56bdee589bd3e23",
           "blobId": "Gcc60576f036321ae6e8037ffc56bdee589bd3e23",
           "size": 19,
-          "expires": "2021-10-21T05:34:47Z",
           "type": "application/octet-stream"
         }
       },
@@ -382,7 +400,6 @@ Any of
 
 * data:asText
 * data:asBase64
-* data:asHex
 * data *selects data:asText if the content is valid UTF-8, or data:asBase64*
 * size
 
@@ -392,7 +409,6 @@ If not given, properties defaults to `data` and `size`.
 
 * data:asText: String|null *the raw octets of the selected range if they are valid UTF-8, otherwise null*
 * data:asBase64: String *the base64 encoding of the selected range*
-* data:asHex: String *the octets of the selected range encoded as lowercase hexadecimal (0-9, a-f)*
 * isEncodingProblem: Boolean *(default: false)*
 * isTruncated: Boolean *(default: false)*
 * size: UnsignedInt *the number of octets in the entire blob, regardless of offset/length selectors*
@@ -403,9 +419,10 @@ regardless of offset and length.
 The data fields contain a representation of the octets within the selected
 range that are present in the blob.  If the octets selected are not valid
 UTF-8 (including truncating in the middle of a multi-octet sequence)
-and `data:asText` or `data` is selected, then the key `isEncodingProblem`
+and `data:asText` is requested, then the key `isEncodingProblem`
 is set to `true` and the `data:asText` value is `null`.  In the case where
-`data` was requested, this also causes `data:asBase64` to be returned.
+`data` was requested and the data is not valid UTF-8, then `data:asBase64`
+is returned.
 
 If the selected range requests data outside the blob (i.e. the offset+length
 is larger than the blob) then the result is either just the octets from the
@@ -420,30 +437,45 @@ the lazy dog!")
 ```
 Method Call:
 
-[ "Blob/get", {
-  "accountId" : "account1",
-  "ids" : [ "G6ec94756e3e046be78fcb33953b85b944e70673e", "not-a-blob" ],
-  "properties" : [ "data:asText", "data:asBase64",
-                   "data:asHex", "size" ],
-  "offset" : 4,
-  "length" : 9
-}, "R1" ]
+[
+  "Blob/get",
+  {
+    "accountId" : "account1",
+    "ids" : [
+      "G6ec94756e3e046be78fcb33953b85b944e70673e",
+      "not-a-blob"
+    ],
+    "properties" : [
+      "data:asText",
+      "data:asBase64",
+      "size"
+    ],
+    "offset" : 4,
+    "length" : 9
+  },
+  "R1"
+]
 
 Response:
 
-[ "Blob/get", {
-  "accountId" : "account1",
-  "list" : [
-    {
-      "id" : "G6ec94756e3e046be78fcb33953b85b944e70673e",
-      "data:asText" : "quick bro",
-      "data:asBase64" : "cXVpY2sgYnJvCg==",
-      "data:asHex" : "717569636b2062726f",
-      "size" : 46
-    }
-  ],
-  "notFound" : [ "not-a-blob" ]
-}, "R1" ]
+[
+  "Blob/get",
+  {
+    "accountId": "account1",
+    "list": [
+      {
+        "id": "G6ec94756e3e046be78fcb33953b85b944e70673e",
+        "data:asText": "quick bro",
+        "data:asBase64": "cXVpY2sgYnJvCg==",
+        "size": 46
+      }
+    ],
+    "notFound": [
+      "not-a-blob"
+    ]
+  },
+  "R1"
+]
 
 ```
 
@@ -503,29 +535,53 @@ as it may not be able to know if other data types do reference that blob.
 e.g.
 
 ```
-[ "Blob/lookup", {
-  "typeNames": ["Mailbox", "Thread", "Email"],
-  "ids": ["Gd2f81008cf07d2425418f7f02a3ca63a8bc82003",
-          "not-a-blob"]
-}, "R1" ]
+[
+  "Blob/lookup",
+  {
+    "typeNames": [
+      "Mailbox",
+      "Thread",
+      "Email"
+    ],
+    "ids": [
+      "Gd2f81008cf07d2425418f7f02a3ca63a8bc82003",
+      "not-a-blob"
+    ]
+  },
+  "R1"
+]
 ```
 
 Response:
 
 ```
-[ "Blob/lookup", {
-  "list": [
-    {
-      "id": "Gd2f81008cf07d2425418f7f02a3ca63a8bc82003",
-      "matchedIds": {
-        "Mailbox": ["M54e97373", Mcbe6b662"],
-        "Thread": ["T1530616e"],
-        "Email": ["E16e70a73eb4", "E84b0930cf16"]
+[
+  "Blob/lookup",
+  {
+    "list": [
+      {
+        "id": "Gd2f81008cf07d2425418f7f02a3ca63a8bc82003",
+        "matchedIds": {
+          "Mailbox": [
+            "M54e97373",
+            "Mcbe6b662"
+          ],
+          "Thread": [
+            "T1530616e"
+          ],
+          "Email": [
+            "E16e70a73eb4",
+            "E84b0930cf16"
+          ]
+        }
       }
-    }
-  ],
-  "notFound": ["not-a-blob"]
-}, "R1"]
+    ],
+    "notFound": [
+      "not-a-blob"
+    ]
+  },
+  "R1"
+]
 ```
 
 # Security considerations
@@ -614,6 +670,14 @@ EDITOR: please remove this section before publication.
 
 The source of this document exists on github at: https://github.com/brong/draft-gondwana-jmap-blob/
 
+**draft-ietf-jmap-blob-06**:
+
+- removed asHex - we only need base64 and text
+- added reference to where base64 is defined
+- made 'destroy' not be allowed
+- expanded JSON examples for readability
+- removed 'expires' from examples
+
 **draft-ietf-jmap-blob-05**:
 
 - discovered I hadn't actually included `typeNames` and `matchedIds` anywhere except the
@@ -668,6 +732,7 @@ The source of this document exists on github at: https://github.com/brong/draft-
 
 # Acknowledgements
 
-Alexey Melnikov, Ken Murchison, and the JMAP working group at the IETF.
+Joris Baum, Neil Jenkiuns, Alexey Melnikov, Ken Murchison, Robert Stepanek and
+the JMAP working group at the IETF.
 
 {backmatter}
