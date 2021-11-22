@@ -2,18 +2,18 @@
     title = "JMAP Blob management extension"
     abbrev = "JMAP Blob"
     category = "std"
-    docName = "draft-ietf-jmap-blob-06"
+    docName = "draft-ietf-jmap-blob-07"
     updates = [8620]
     ipr= "trust200902"
     area = "Applications"
     workgroup = "JMAP"
     keyword = ["jmap"]
 
-    date = 2021-11-12T00:00:01Z
+    date = 2021-11-22T00:00:01Z
 
     [seriesInfo]
     name="Internet-Draft"
-    value="draft-ietf-jmap-blob-06"
+    value="draft-ietf-jmap-blob-07"
     stream="IETF"
     status="standard"
 
@@ -363,7 +363,6 @@ Responses:
       "created": {
         "b4": {
           "id": "Gc0854fb9fb03c41cce3802cb0d220529e6eef94e",
-          "blobId": "Gc0854fb9fb03c41cce3802cb0d220529e6eef94e",
           "size": 45,
           "type": "application/octet-stream"
         }
@@ -373,7 +372,7 @@ Responses:
       "notCreated": null,
       "notUpdated": null,
       "notDestroyed": null,
-      "accountId": "cassandane"
+      "accountId": "account1"
     },
     "S4"
   ],
@@ -384,7 +383,6 @@ Responses:
       "created": {
         "cat": {
           "id": "Gcc60576f036321ae6e8037ffc56bdee589bd3e23",
-          "blobId": "Gcc60576f036321ae6e8037ffc56bdee589bd3e23",
           "size": 19,
           "type": "application/octet-stream"
         }
@@ -394,7 +392,7 @@ Responses:
       "notCreated": null,
       "notUpdated": null,
       "notDestroyed": null,
-      "accountId": "cassandane"
+      "accountId": "account1"
     },
     "CAT"
   ],
@@ -409,7 +407,7 @@ Responses:
         }
       ],
       "notFound": [],
-      "accountId": "cassandane"
+      "accountId": "account1"
     },
     "G4"
   ]
@@ -475,8 +473,10 @@ end of the blob.  Either way, the `isTruncated` property in the result is
 set to `true` to tell the client that the requested range could not be
 fully satisfied.
 
-Example (a blob containing the string "The quick brown fox jumped over
-the lazy dog!")
+Example:
+
+Where a blob containing the string "The quick brown fox jumped over
+the lazy dog!" has blobId `G6ec94756e3e046be78fcb33953b85b944e70673e`.
 
 ```
 Method Call:
@@ -522,6 +522,248 @@ Response:
 ]
 
 ```
+
+Example - range and encoding errors:
+
+The `b1` value is the text: "The quick brown fox jumped over the \x81\x81 fox"
+which contains an invalid utf8 sequence.
+
+The results have the following interesting properties:
+
+* G1: defaults to `data` and `size` - so b1 returns `isEncodingProblem`
+  and a base64 value.
+
+* G2: since `data:asText` was explicitly selected, does not attempt to
+  return a value for the data, just `isEncodingProblem` for b1.
+
+* G3: since only `data:asBase64` was requested, there is no encoding
+  problem and both values are returned.
+
+* G4: since the requested range could be satisfied as text, both blobs
+  are returned as `data:asText` and there is no encoding problem.
+
+* G5: both blobs cannot satisfy the requested range, so isTruncated is
+  true for both.
+
+```
+Request:
+
+[
+  [
+    "Blob/set",
+    {
+      "create": {
+        "b1": {
+          "data:asBase64": "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wZWQgb3ZlciB0aGUggYEgZG9nLg=="
+        },
+        "b2": {
+          "data:asText": "hello world",
+          "type" : "text/plain"
+        }
+      }
+    },
+    "S1"
+  ],
+  [
+    "Blob/get",
+    {
+      "ids": [
+        "#b1",
+        "#b2"
+      ]
+    },
+    "G1"
+  ],
+  [
+    "Blob/get",
+    {
+      "ids": [
+        "#b1",
+        "#b2"
+      ],
+      "properties": [
+        "data:asText",
+        "size"
+      ]
+    },
+    "G2"
+  ],
+  [
+    "Blob/get",
+    {
+      "ids": [
+        "#b1",
+        "#b2"
+      ],
+      "properties": [
+        "data:asBase64",
+        "size"
+      ]
+    },
+    "G3"
+  ],
+  [
+    "Blob/get",
+    {
+      "offset": 0,
+      "length": 5,
+      "ids": [
+        "#b1",
+        "#b2"
+      ]
+    },
+    "G4"
+  ],
+  [
+    "Blob/get",
+    {
+      "offset": 20,
+      "length": 100,
+      "ids": [
+        "#b1",
+        "#b2"
+      ]
+    },
+    "G5"
+  ]
+]
+
+
+Response:
+
+[
+  [
+    "Blob/set",
+    {
+      "oldState": null,
+      "created": {
+        "b2": {
+          "id": "G2aae6c35c94fcfb415dbe95f408b9ce91ee846ed",
+          "size": 11,
+          "type": "application/octet-stream"
+        },
+        "b1": {
+          "id": "G72cfa4804194563685d9a4b695f7ba20e7739576",
+          "size": 43,
+          "type": "text/plain"
+        }
+      },
+      "updated": null,
+      "destroyed": null,
+      "notCreated": null,
+      "notUpdated": null,
+      "notDestroyed": null,
+      "accountId": "account1"
+    },
+    "S1"
+  ],
+  [
+    "Blob/get",
+    {
+      "list": [
+        {
+          "id": "G72cfa4804194563685d9a4b695f7ba20e7739576",
+          "isEncodingProblem": true,
+          "data:asBase64": "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wZWQgb3ZlciB0aGUggYEgZG9nLg==",
+          "size": 43
+        },
+        {
+          "id": "G2aae6c35c94fcfb415dbe95f408b9ce91ee846ed",
+          "data:asText": "hello world",
+          "size": 11
+        }
+      ],
+      "notFound": [],
+      "accountId": "account1"
+    },
+    "G1"
+  ],
+  [
+    "Blob/get",
+    {
+      "list": [
+        {
+          "id": "G72cfa4804194563685d9a4b695f7ba20e7739576",
+          "isEncodingProblem": true,
+          "size": 43
+        },
+        {
+          "id": "G2aae6c35c94fcfb415dbe95f408b9ce91ee846ed",
+          "data:asText": "hello world",
+          "size": 11
+        }
+      ],
+      "notFound": [],
+      "accountId": "account1"
+    },
+    "G2"
+  ],
+  [
+    "Blob/get",
+    {
+      "list": [
+        {
+          "id": "G72cfa4804194563685d9a4b695f7ba20e7739576",
+          "data:asBase64": "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wZWQgb3ZlciB0aGUggYEgZG9nLg==",
+          "size": 43
+        },
+        {
+          "id": "G2aae6c35c94fcfb415dbe95f408b9ce91ee846ed",
+          "data:asBase64": "aGVsbG8gd29ybGQ=",
+          "size": 11
+        }
+      ],
+      "notFound": [],
+      "accountId": "account1"
+    },
+    "G3"
+  ],
+  [
+    "Blob/get",
+    {
+      "list": [
+        {
+          "id": "G72cfa4804194563685d9a4b695f7ba20e7739576",
+          "data:asText": "The q",
+          "size": 43
+        },
+        {
+          "id": "G2aae6c35c94fcfb415dbe95f408b9ce91ee846ed",
+          "data:asText": "hello",
+          "size": 11
+        }
+      ],
+      "notFound": [],
+      "accountId": "account1"
+    },
+    "G4"
+  ],
+  [
+    "Blob/get",
+    {
+      "list": [
+        {
+          "id": "G72cfa4804194563685d9a4b695f7ba20e7739576",
+          "isTruncated": true,
+          "isEncodingProblem": true,
+          "data:asBase64": "anVtcGVkIG92ZXIgdGhlIIGBIGRvZy4=",
+          "size": 43
+        },
+        {
+          "id": "G2aae6c35c94fcfb415dbe95f408b9ce91ee846ed",
+          "isTruncated": true,
+          "data:asText": "",
+          "size": 11
+        }
+      ],
+      "notFound": [],
+      "accountId": "account1"
+    },
+    "G5"
+  ]
+]
+```
+
 
 ## Blob/lookup
 
@@ -713,6 +955,10 @@ IANA is requested to create a new registry "JMAP Data Types" with the initial co
 EDITOR: please remove this section before publication.
 
 The source of this document exists on github at: https://github.com/brong/draft-gondwana-jmap-blob/
+
+**draft-ietf-jmap-blob-07**:
+
+- more examples to cover the interactions of offset, length and encoding checks.
 
 **draft-ietf-jmap-blob-06**:
 
