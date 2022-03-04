@@ -2,18 +2,18 @@
     title = "JMAP Blob management extension"
     abbrev = "JMAP Blob"
     category = "std"
-    docName = "draft-ietf-jmap-blob-07"
+    docName = "draft-ietf-jmap-blob-09"
     updates = [8620]
     ipr= "trust200902"
     area = "Applications"
     workgroup = "JMAP"
     keyword = ["jmap"]
 
-    date = 2021-11-22T00:00:01Z
+    date = 2022-03-04T00:00:01Z
 
     [seriesInfo]
     name="Internet-Draft"
-    value="draft-ietf-jmap-blob-07"
+    value="draft-ietf-jmap-blob-09"
     stream="IETF"
     status="standard"
 
@@ -37,9 +37,9 @@
 
 The JMAP base protocol (RFC8620) provides the ability to upload and download
 arbitrary binary data via HTTP POST and GET on defined endpoint.  This binary
-data is called a "Blob".
+data is called a "blob".
 
-This extension adds additional ways to create and access Blobs, by making
+This extension adds additional ways to create and access blobs, by making
 inline method calls within a standard JMAP request.
 
 This extension also adds a reverse lookup mechanism to discover where blobs
@@ -49,21 +49,22 @@ are referenced within other data types.
 
 # Introduction
 
-Sometimes JMAP ([@!RFC8620]) interactions require creating a Blob and then
-referencing it.  In the same way that IMAP Literals ([@RFC7888]) were extended
-to reduce roundtrips for simple data, embedding simple small blobs into the
-JMAP method stream can reduce roundtrips.
+Sometimes JMAP ([@!RFC8620]) interactions require creating a blob and then
+referencing it.  In the same way that IMAP Literals were extended by [@RFC7888],
+embedding small blobs directly into the JMAP method calls array can be an
+option for reducing roundtrips.
 
 Likewise, when fetching an object, it can be useful to also fetch the raw
 content of that object without a separate roundtrip.
 
-Since raw blobs could contain arbitrary binary data, this document allows
-the use of the base64 coding specified in [@!RFC4648].
+Since raw blobs may contain arbitrary binary data, this document defines
+a use of the base64 coding specified in [@!RFC4648] for both creating and
+fetching blob data.
 
 Where JMAP is being proxied through a system which applies additional
-access restrictions, it can be useful to know where a blob is referenced
-in order to decide whether to allow it to be downloaded, so this document
-defines a way to look up where a particular blobId is referenced.
+access restrictions, it can be useful to know which objects reference
+any particular blob, and this document defines a way to discover those
+references.
 
 # Conventions Used In This Document
 
@@ -82,35 +83,48 @@ This document defines an additional capability URI.
 
 ## urn:ietf:params:jmap:blob
 
-This represents support for additional API methods on the Blob datatype.
+The capability `urn:ietf:params:jmap:blob` being present in the
+"accountCapabilities" property of an account represents support
+for additional API methods on the Blob datatype.  Servers that
+include the capability in one or more "accountCapabilities"
+properties MUST also include the property in the "capabilities"
+property.
 
-The value of this property in the JMAP session "capabilities" property
-is an empty object.
+The value of this property in the JMAP session "capabilities"
+property MUST be an empty object.
 
 The value of this property in an account's "accountCapabilities"
 property is an object that MAY contain the following information on
 server capabilities and permissions for that account:
 
-* maxSizeBlobSet: `UnsignedInt`
+* maxSizeBlobSet: `UnsignedInt|null`
 
-    if set, gives the maximum size of a blob
-    in octets that the server will allow you to create (size of the final
-    output of catenate or of encoded forms).
-    This SHOULD be the same as the RFC8620 value `maxSizeUpload`.
+    If present, this is the maximum size of blob (in octets) that the server
+    will allow to be created (including blobs created by concatenating
+    multiple data sources together).
 
-* maxCatenateItems: `UnsignedInt`
+    Clients MUST NOT attempt to create blobs larger than this size.
 
-    if set, gives the maximum number of
-    of CatenateSourceObjects allowed per creation in a Blob/set.  Servers
-    SHOULD allow at least 64 items.
+    If this value is not present or `null`, then clients are not required to
+    limit the size of blob they try to create, though servers can always
+    reject creation of blobs regardless of size; e.g. due to lack of
+    disk space, or per-user rate limits.
+
+* maxDataSources: `UnsignedInt|null`
+
+    If present, gives the maximum number of of DataSourceObjects allowed per
+    creation in a Blob/upload.  Servers MUST allow at least 64 items.
+
+    If this value is not present or `null`, then clients SHOULD assume
+    a limit of 64 items.
 
 * supportedTypeNames: `[String]|null`
 
-    an array of data type names that are
-    supported for `Blob/lookup`.  May be `null` or not present if the account
-    does not support reverse lookups.
+    An array of data type names that are supported for `Blob/lookup`.  If the
+    server does not support lookups then this could be the empty list, not present
+    or `null`.
 
-Example:
+### Capability Example
 
 ```
 {
@@ -124,7 +138,7 @@ Example:
       "accountCapabilities": {
         "urn:ietf:params:jmap:blob": {
           "maxSizeBlobSet": 50000000,
-          "maxCatenateItems": 100,
+          "maxDataSources": 100,
           "supportedTypeNames" : [
             "Mailbox",
             "Thread",
@@ -148,35 +162,27 @@ is unchanged by this specfication, and is selected by the
 The following JMAP Methods are selected by the
 `urn:ietf:params:jmap:blob` capability.
 
-## Blob/set
+## Blob/upload
 
-This is a standard JMAP `set` method.
+This is similar to a Foo/set from [@!RFC8620], but only has a `create` argument
+as blobs can't be updated or deleted.
 
-### create
+**Parameters**
 
-**Properties:**
+* accountId: `Id`
 
-Exactly one of:
+    The id of the account in which the blobs will be created.
 
-* data:asText: `String`
+* create: `Id[UploadObject]`
 
-    data which can be represented as utf-8 encoded text
+    A map of creation id to UploadObjects.
 
-* data:asBase64: `String`
+**Result**
 
-    binary data encoded as a ([@!RFC4648] Section 4) Base 64 string
+The result is the same as for Foo/set in RFC8620, with `created` and `notCreated` objects
+mapping from the creationId.
 
-* catenate: `[CatenateSourceObject]`
-
-    list of one or more octet sources in order
-
-Also optionally:
-
-* type: `String|null` (default: null)
-
-    hint for media type of the data
-
-Result is:
+The `created` objects contain:
 
 * id: `Id`
 
@@ -193,10 +199,29 @@ Result is:
 Plus any other properties identical to those that would be returned in the
 JSON response of the RFC8620 upload endpoint (which may be extended in
 the future - this document anticipates that implementations will
-extend both the upload endpoint and the Blob/set responses in the
+extend both the upload endpoint and the Blob/upload responses in the
 same way)
 
-CatenateSourceObject:
+Or if there is a problem with a creation, then the server will return a `notCreated`
+response with a map from the failed creationId to a `SetError` object.
+
+NOTE: Servers MUST set the `creationIds` value to the blobId returned in any successful
+Blob/upload's `created` response to allow backreferences, as that is the main purpose
+of this extensions.
+
+**UploadObject**
+
+* data: `[DataSourceObject]`
+
+    an array of zero or more octet sources in order (zero to create an empty blob).
+    The result of each of these sources is concatenated together in order to create
+    the blob.
+
+* type: `String|null` (default: null)
+
+    hint for media type of the data
+
+**DataSourceObject**
 
 Exactly one of:
 
@@ -208,9 +233,9 @@ or a blobId source:
 
 * blobId: `Id`
 
-* offset: `UnsignedInt|null` (may be zero)
+* offset: `UnsignedInt|null` (MAY be zero)
 
-* length: `UnsignedInt|null` (must not be zero)
+* length: `UnsignedInt|null` (MUST NOT be zero)
 
 If `null` then offset is assumed to be zero.
 
@@ -220,34 +245,21 @@ If the range can not be fully satisfied (i.e. extends past the
 end of the data in the blob) then the catenate itself is invalid
 and results in a notCreated response for this creation id.
 
-If the data properties or catenate properties have any invalid references
-or invalid data contained in them, the server MUST NOT guess as to the
-user's intent, and MUST reject the creation and return a notCreated
-response for that creation id.
+If the data properties have any invalid references or invalid data
+contained in them, the server MUST NOT guess as to the user's intent,
+and MUST reject the creation and return a notCreated response for that
+creation id.
 
 Likewise, invalid characters in the base64 of data:asBase64, or invalid
 UTF-8 in data:asText MUST result in a nonCreated response.
 
-It is legal to create a blob by calling catenate with a single
-CatenateSourceObject.  Please note that a catenate source can not
-contain additional sub-catenates, only data or blob sources.
-
 It is envisaged that catenate sources might be extended in future,
 for example to fetch external content.
 
-A server SHOULD accept at least 64 catenate items.
+A server MUST accept at least 64 DataSourceObjects per create, as
+described in Section 3.1 of this document.
 
-### update
-
-It is not possible to update a Blob, so any update will result
-in a `notUpdated` response.
-
-### destroy
-
-It is not possible to destroy a Blob, so any destroy will result
-in a `notDestroyed` response.
-
-## Blob/set examples
+### Blob/upload simple example
 
 The data:asBase64 field is set over multiple lines for ease of
 publication here, however all data:asBase64 would be sent as a
@@ -257,14 +269,18 @@ continuous string with no whitespace on the wire.
 Method Call:
 
 [
-  "Blob/set",
+  "Blob/upload",
   {
     "accountId": "account1",
     "create": {
       "1": {
-        "data:asBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKA
-                          AAAA1BMVEX/AAAZ4gk3AAAAAXRSTlN/gFy0ywAAAApJRE
-                          FUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII=",
+        "data" : [
+          {
+            "data:asBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKA
+                              AAAA1BMVEX/AAAZ4gk3AAAAAXRSTlN/gFy0ywAAAApJRE
+                              FUeJxjYgAAAAYAAzY3fKgAAAAASUVORK5CYII=",
+          }
+        ],
         "type": "image/png"
       },
     },
@@ -275,7 +291,7 @@ Method Call:
 Response:
 
 [
-  "Blob/set",
+  "Blob/upload",
   {
     "accountId" : "account1",
     "created" : {
@@ -290,29 +306,33 @@ Response:
 ]
 ```
 
-Complex catenate example:
+### Blob/upload complex example
 
 ```
 Method Calls:
 
 [
   [
-    "Blob/set",
+    "Blob/upload",
     {
       "create": {
         "b4": {
-          "data:asText": "The quick brown fox jumped over the lazy dog."
+          "data": [
+            {
+              "data:asText": "The quick brown fox jumped over the lazy dog."
+            }
+          ]
         }
       }
     },
     "S4"
   ],
   [
-    "Blob/set",
+    "Blob/upload",
     {
       "create": {
         "cat": {
-          "catenate": [
+          "data": [
             {
               "data:asText": "How"
             },
@@ -357,7 +377,7 @@ Responses:
 
 [
   [
-    "Blob/set",
+    "Blob/upload",
     {
       "oldState": null,
       "created": {
@@ -377,7 +397,7 @@ Responses:
     "S4"
   ],
   [
-    "Blob/set",
+    "Blob/upload",
     {
       "oldState": null,
       "created": {
@@ -420,11 +440,16 @@ A standard JMAP get, with two additional optional parameters:
 
 * offset: `UnsignedInt|null`
 
-    start this many octets into the blob data
+    start this many octets into the blob data.  If null or
+    unspecified, this defaults to zero.
 
 * length: `UnsignedInt|null`
 
-    return at most this many octets of the blob data
+    return at most this many octets of the blob data.  If null or
+    unspecified, then all remaining octets in the blob are returned.
+    This can be considered equivalent to an infinitely large length
+    value, except that the isTruncated warning is not given unless
+    the start offset is past the end of the blob.
 
 **Request Properties:**
 
@@ -445,7 +470,7 @@ If not given, properties defaults to `data` and `size`.
 
 * data:asBase64: `String`
 
-    the base64 encoding of the selected range
+    the base64 encoding of the octets in the selected range
 
 * isEncodingProblem: `Boolean` (default: false)
 
@@ -453,27 +478,27 @@ If not given, properties defaults to `data` and `size`.
 
 * size: `UnsignedInt`
 
-    the number of octets in the entire blob, regardless of offset/length selectors
+    the number of octets in the entire blob
 
-The size value is always the number of octets in the entire blob,
+The size value MUST always be the number of octets in the underlying blob,
 regardless of offset and length.
 
 The data fields contain a representation of the octets within the selected
 range that are present in the blob.  If the octets selected are not valid
 UTF-8 (including truncating in the middle of a multi-octet sequence)
-and `data:asText` is requested, then the key `isEncodingProblem`
-is set to `true` and the `data:asText` value is `null`.  In the case where
-`data` was requested and the data is not valid UTF-8, then `data:asBase64`
-is returned.
+and `data` or `data:asText` was requested, then the key `isEncodingProblem`
+MUST be set to `true` and the `data:asText` response value MUST be `null`.
+In the case where `data` was requested and the data is not valid UTF-8,
+then `data:asBase64` MUST be returned.
 
 If the selected range requests data outside the blob (i.e. the offset+length
 is larger than the blob) then the result is either just the octets from the
 offset to the end of the blob, or an empty string if the offset is past the
-end of the blob.  Either way, the `isTruncated` property in the result is
-set to `true` to tell the client that the requested range could not be
+end of the blob.  Either way, the `isTruncated` property in the result MUST
+be set to `true` to tell the client that the requested range could not be
 fully satisfied.
 
-Example:
+### Blob/get simple example
 
 Where a blob containing the string "The quick brown fox jumped over
 the lazy dog!" has blobId `G6ec94756e3e046be78fcb33953b85b944e70673e`.
@@ -523,7 +548,7 @@ Response:
 
 ```
 
-Example - range and encoding errors:
+### Blob/get example with range and encoding errors
 
 The `b1` value is the text: "The quick brown fox jumped over the \x81\x81 fox"
 which contains an invalid utf8 sequence.
@@ -545,19 +570,32 @@ The results have the following interesting properties:
 * G5: both blobs cannot satisfy the requested range, so isTruncated is
   true for both.
 
+
+Note: some values have been wrapped for line length - there would be
+no whitespace in the `data:asBase64` values on the wire
+
 ```
-Request:
+Method calls:
 
 [
   [
-    "Blob/set",
+    "Blob/upload",
     {
       "create": {
         "b1": {
-          "data:asBase64": "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wZWQgb3ZlciB0aGUggYEgZG9nLg=="
+          "data": [
+            {
+              "data:asBase64": "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wZW
+                                Qgb3ZlciB0aGUggYEgZG9nLg=="
+            }
+          ]
         },
         "b2": {
-          "data:asText": "hello world",
+          "data": [
+            {
+              "data:asText": "hello world"
+            }
+          ],
           "type" : "text/plain"
         }
       }
@@ -628,12 +666,11 @@ Request:
   ]
 ]
 
-
-Response:
+Responses:
 
 [
   [
-    "Blob/set",
+    "Blob/upload",
     {
       "oldState": null,
       "created": {
@@ -664,7 +701,8 @@ Response:
         {
           "id": "G72cfa4804194563685d9a4b695f7ba20e7739576",
           "isEncodingProblem": true,
-          "data:asBase64": "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wZWQgb3ZlciB0aGUggYEgZG9nLg==",
+          "data:asBase64": "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wZW
+                            Qgb3ZlciB0aGUggYEgZG9nLg==",
           "size": 43
         },
         {
@@ -704,7 +742,8 @@ Response:
       "list": [
         {
           "id": "G72cfa4804194563685d9a4b695f7ba20e7739576",
-          "data:asBase64": "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wZWQgb3ZlciB0aGUggYEgZG9nLg==",
+          "data:asBase64": "VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wZW
+                            Qgb3ZlciB0aGUggYEgZG9nLg==",
           "size": 43
         },
         {
@@ -764,7 +803,6 @@ Response:
 ]
 ```
 
-
 ## Blob/lookup
 
 Given a list of blobIds, this method does a reverse lookup in each of
@@ -785,7 +823,7 @@ then it references that blobId.  Likewise for a Thread.
 * typeNames: `[String]`
 
     A list of names from the "JMAP Data Types" registry.  Only names
-    for which "Can Reference Blobs" is true may be specified, and the
+    for which "Can reference blobs" is true may be specified, and the
     capability which defines each type must also be used by the overall
     JMAP request in which this method is called.
 
@@ -818,9 +856,11 @@ If a blob is not visible to a user at all, then the server SHOULD return that bl
 in the notFound array, however it may also return an empty list for each type name,
 as it may not be able to know if other data types do reference that blob.
 
-e.g.
+### Blob/lookup example
 
 ```
+Method call:
+
 [
   "Blob/lookup",
   {
@@ -836,11 +876,9 @@ e.g.
   },
   "R1"
 ]
-```
 
 Response:
 
-```
 [
   "Blob/lookup",
   {
@@ -889,17 +927,17 @@ always return the same type of response, regardless of whether a blob
 exists but the user can't access it, or doesn't exist at all.  This
 avoids leaking information about the existence of the blob.
 
-The server MUST NOT trust that the data given to a Blob/set is a well formed
+The server MUST NOT trust that the data given to a Blob/upload is a well formed
 instance of the specified media type, and if the server attempts to parse
 the given blob, only hardened parsers designed to deal with arbitrary untrusted
 data should be used.  The server SHOULD NOT reject data on the grounds that
 it is not a valid specimen of the stated type.
 
-Blob/set catenate can be used to recreate dangerous content on the far side of
-security scanners (anti-virus or exfiltration scanners for example) which may be
-watching the upload endpoint.  Server implementations SHOULD provide a hook to
-allow security scanners to check the resulting blobId from a catenate in the
-same way that they do for the upload endpoint.
+Blob/upload with carefully chosen DataSources can be used to recreate dangerous
+content on the far side of security scanners (anti-virus or exfiltration scanners
+for example) which may be watching the upload endpoint.  Server implementations
+SHOULD provide a hook to allow security scanners to check the resulting blob after
+concatenating the data sources in the same way that they do for the upload endpoint.
 
 # IANA considerations
 
@@ -936,10 +974,10 @@ Description: The server does not recognise this data type, or the capability to 
 
 IANA is requested to create a new registry "JMAP Data Types" with the initial content:
 
-| Type Name | Can Reference Blobs | Can use for State Change | Capability | Reference
+| Type Name | Can reference blobs | Can use for state change | Capability | Reference
 | ------------- | ------------------- | ------------------------ | ---------  | ---------
-| Core          | No | No | urn:ietf:params:jmap:core | [@RFC8620]
-| PushSubscription | No | No | urn:ietf:params:jmap:core | [@RFC8620]
+| Core          | No | No | urn:ietf:params:jmap:core | [@!RFC8620]
+| PushSubscription | No | No | urn:ietf:params:jmap:core | [@!RFC8620]
 | Mailbox       | Yes | Yes | urn:ietf:params:jmap:mail | [@RFC8621]
 | Thread        | Yes | Yes | urn:ietf:params:jmap:mail | [@RFC8621]
 | Email         | Yes | Yes | urn:ietf:params:jmap:mail | [@RFC8621]
@@ -955,6 +993,25 @@ IANA is requested to create a new registry "JMAP Data Types" with the initial co
 EDITOR: please remove this section before publication.
 
 The source of this document exists on github at: https://github.com/brong/draft-gondwana-jmap-blob/
+
+**draft-ietf-jmap-blob-09**:
+
+- tidied up introduction text
+- replaced Blob/set with Blob/upload
+- made all upload creates take an array of sources to normalise behaviour at the cost of a slightly more
+  complex default case.
+
+**draft-ietf-jmap-blob-08**:
+
+- Fixed spelling of Neil's name in acknowledgements
+- Last call review (thanks Jim Fenton)
+  - fixed mmark sillyness causing RFC8620 to be non-normative in the references
+  - clarified the capability object and accountCapability object requirements
+  - made capability keys much more tightly defined, with mandatory minimum
+    catenate limit and default values.
+  - increased use of normative language generally
+  - lowercased 'blob' anywhere it wasn't explicitly the object
+  - lowercased titles of the columns in the registry
 
 **draft-ietf-jmap-blob-07**:
 
@@ -1022,7 +1079,7 @@ The source of this document exists on github at: https://github.com/brong/draft-
 
 # Acknowledgements
 
-Joris Baum, Neil Jenkiuns, Alexey Melnikov, Ken Murchison, Robert Stepanek and
+Joris Baum, Jim Fenton, Neil Jenkins, Alexey Melnikov, Ken Murchison, Robert Stepanek and
 the JMAP working group at the IETF.
 
 {backmatter}
