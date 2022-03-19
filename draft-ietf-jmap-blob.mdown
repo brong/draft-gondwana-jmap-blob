@@ -2,18 +2,18 @@
     title = "JMAP Blob management extension"
     abbrev = "JMAP Blob"
     category = "std"
-    docName = "draft-ietf-jmap-blob-09"
+    docName = "draft-ietf-jmap-blob-10"
     updates = [8620]
     ipr= "trust200902"
     area = "Applications"
     workgroup = "JMAP"
     keyword = ["jmap"]
 
-    date = 2022-03-04T00:00:01Z
+    date = 2022-03-19T00:00:01Z
 
     [seriesInfo]
     name="Internet-Draft"
-    value="draft-ietf-jmap-blob-09"
+    value="draft-ietf-jmap-blob-10"
     stream="IETF"
     status="standard"
 
@@ -242,7 +242,7 @@ If `null` then offset is assumed to be zero.
 If `null` then length is the remaining octets in the blob.
 
 If the range can not be fully satisfied (i.e. extends past the
-end of the data in the blob) then the catenate itself is invalid
+end of the data in the blob) then the DataSourceObject is invalid
 and results in a notCreated response for this creation id.
 
 If the data properties have any invalid references or invalid data
@@ -253,8 +253,8 @@ creation id.
 Likewise, invalid characters in the base64 of data:asBase64, or invalid
 UTF-8 in data:asText MUST result in a nonCreated response.
 
-It is envisaged that catenate sources might be extended in future,
-for example to fetch external content.
+It is envisaged that the definition for DataSourceObject might be
+extended in future, for example to fetch external content.
 
 A server MUST accept at least 64 DataSourceObjects per create, as
 described in Section 3.1 of this document.
@@ -933,7 +933,7 @@ the given blob, only hardened parsers designed to deal with arbitrary untrusted
 data should be used.  The server SHOULD NOT reject data on the grounds that
 it is not a valid specimen of the stated type.
 
-Blob/upload with carefully chosen DataSources can be used to recreate dangerous
+Blob/upload with carefully chosen data sources can be used to recreate dangerous
 content on the far side of security scanners (anti-virus or exfiltration scanners
 for example) which may be watching the upload endpoint.  Server implementations
 SHOULD provide a hook to allow security scanners to check the resulting blob after
@@ -993,6 +993,10 @@ IANA is requested to create a new registry "JMAP Data Types" with the initial co
 EDITOR: please remove this section before publication.
 
 The source of this document exists on github at: https://github.com/brong/draft-gondwana-jmap-blob/
+
+**draft-ietf-jmap-blob-10**:
+
+- removed remaining references to `catenate`.
 
 **draft-ietf-jmap-blob-09**:
 
