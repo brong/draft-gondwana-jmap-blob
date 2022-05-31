@@ -2,18 +2,18 @@
     title = "JMAP Blob management extension"
     abbrev = "JMAP Blob"
     category = "std"
-    docName = "draft-ietf-jmap-blob-10"
+    docName = "draft-ietf-jmap-blob-11"
     updates = [8620]
     ipr= "trust200902"
     area = "Applications"
     workgroup = "JMAP"
     keyword = ["jmap"]
 
-    date = 2022-03-19T00:00:01Z
+    date = 2022-03-26T00:00:01Z
 
     [seriesInfo]
     name="Internet-Draft"
-    value="draft-ietf-jmap-blob-10"
+    value="draft-ietf-jmap-blob-11"
     stream="IETF"
     status="standard"
 
@@ -498,52 +498,90 @@ end of the blob.  Either way, the `isTruncated` property in the result MUST
 be set to `true` to tell the client that the requested range could not be
 fully satisfied.
 
+Servers SHOULD store the size for blobs in a format which is efficient to
+read, and clients SHOULD limit their request to just the size parameter if
+that is all they need, as fetching blob content could be significantly more
+expensive and slower for the server.
+
 ### Blob/get simple example
 
 Where a blob containing the string "The quick brown fox jumped over
 the lazy dog!" has blobId `G6ec94756e3e046be78fcb33953b85b944e70673e`.
 
+The first method call requests just the size for multiple blobs, and
+the second requests both size and a short range of the data for one
+of the blobs.
+
 ```
-Method Call:
+Method Calls:
 
 [
-  "Blob/get",
-  {
-    "accountId" : "account1",
-    "ids" : [
-      "G6ec94756e3e046be78fcb33953b85b944e70673e",
-      "not-a-blob"
-    ],
-    "properties" : [
-      "data:asText",
-      "data:asBase64",
-      "size"
-    ],
-    "offset" : 4,
-    "length" : 9
-  },
-  "R1"
+  [
+    "Blob/get",
+    {
+      "ids" : [
+        "G6ec94756e3e046be78fcb33953b85b944e70673e",
+        "not-a-blob"
+      ],
+      "properties" : [
+        "size"
+      ]
+    },
+    "R1"
+  ],
+  [
+    "Blob/get",
+    {
+      "accountId" : "account1",
+      "ids" : [
+        "G6ec94756e3e046be78fcb33953b85b944e70673e"
+      ],
+      "properties" : [
+        "data:asText",
+        "data:asBase64",
+        "size"
+      ],
+      "offset" : 4,
+      "length" : 9
+    },
+    "R2"
+  ]
 ]
 
-Response:
+Responses:
 
 [
-  "Blob/get",
-  {
-    "accountId": "account1",
-    "list": [
-      {
-        "id": "G6ec94756e3e046be78fcb33953b85b944e70673e",
-        "data:asText": "quick bro",
-        "data:asBase64": "cXVpY2sgYnJvCg==",
-        "size": 46
-      }
-    ],
-    "notFound": [
-      "not-a-blob"
-    ]
-  },
-  "R1"
+  [
+    "Blob/get",
+    {
+      "accountId": "account1",
+      "list": [
+        {
+          "id": "G6ec94756e3e046be78fcb33953b85b944e70673e",
+          "size": 46
+        }
+      ],
+      "notFound": [
+        "not-a-blob"
+      ]
+    },
+    "R1"
+  ],
+  [
+    "Blob/get",
+    {
+      "accountId": "account1",
+      "list": [
+        {
+          "id": "G6ec94756e3e046be78fcb33953b85b944e70673e",
+          "data:asText": "quick bro",
+          "data:asBase64": "cXVpY2sgYnJvCg==",
+          "size": 46
+        }
+      ]
+    },
+    "R2"
+  ]
 ]
 
 ```
@@ -993,6 +1031,12 @@ IANA is requested to create a new registry "JMAP Data Types" with the initial co
 EDITOR: please remove this section before publication.
 
 The source of this document exists on github at: https://github.com/brong/draft-gondwana-jmap-blob/
+
+**draft-ietf-jmap-blob-11**:
+
+- updates based on IETF113 feedback:
+  - added wording to suggest the a Blob/get of just size might be faster
+  - added an example with just the size field being selected
 
 **draft-ietf-jmap-blob-10**:
 
