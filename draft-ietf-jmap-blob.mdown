@@ -127,6 +127,14 @@ server capabilities and permissions for that account:
     server does not support lookups then this could be the empty list, not present
     or `null`.
 
+* supportedDigestAlgorithms `String[]|null`
+
+    An array of supported digest algorithms that are supported for `Blob/get`.
+    If the server does not support calculating blob digests, then this could be
+    the empty list, not present, or `null`.  Algorithms on this list *MUST* be
+    present in the HTTP Digest Alogirthms registry defined by [@!RFC3230],
+    and are always lowercased.
+
 ### Capability Example
 
 ```
@@ -146,6 +154,10 @@ server capabilities and permissions for that account:
             "Mailbox",
             "Thread",
             "Email"
+          ],
+          "supportedDigestAlgorithms" : [
+            "sha",
+            "sha-256"
           ]
         }
       }
@@ -454,6 +466,7 @@ Any of
 * data:asText
 * data:asBase64
 * data (returns data:asText if the selected octets are valid UTF-8, or data:asBase64)
+* digest:<algorithm> (where <algorithm> is one of the named algorithms in the `supportedDigestAlgorithms` capability)
 * size
 
 If not given, properties defaults to `data` and `size`.
@@ -467,6 +480,11 @@ If not given, properties defaults to `data` and `size`.
 * data:asBase64: `String`
 
     the base64 encoding of the octets in the selected range
+
+* digest:<algorithm> `String`
+
+    the base64 encoding of the digest of the octets in the selected range,
+    calculated using the named algorithm
 
 * isEncodingProblem: `Boolean` (default: false)
 
@@ -492,7 +510,8 @@ is larger than the blob) then the result is either just the octets from the
 offset to the end of the blob, or an empty string if the offset is past the
 end of the blob.  Either way, the `isTruncated` property in the result MUST
 be set to `true` to tell the client that the requested range could not be
-fully satisfied.
+fully satisfied.  If digest was requested, any `digest` is calculated on the
+octets that would be returned for a `data` field.
 
 Servers SHOULD store the size for blobs in a format which is efficient to
 read, and clients SHOULD limit their request to just the size parameter if
