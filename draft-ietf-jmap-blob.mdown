@@ -2,18 +2,18 @@
     title = "JMAP Blob management extension"
     abbrev = "JMAP Blob"
     category = "std"
-    docName = "draft-ietf-jmap-blob-11"
+    docName = "draft-ietf-jmap-blob-12"
     updates = [8620]
     ipr= "trust200902"
     area = "Applications"
     workgroup = "JMAP"
     keyword = ["jmap"]
 
-    date = 2022-03-26T00:00:01Z
+    date = 2022-06-02T00:00:01Z
 
     [seriesInfo]
     name="Internet-Draft"
-    value="draft-ietf-jmap-blob-11"
+    value="draft-ietf-jmap-blob-12"
     stream="IETF"
     status="standard"
 
@@ -1049,6 +1049,16 @@ stable reference document which defines a JMAP Data Type and associated capabili
 EDITOR: please remove this section before publication.
 
 The source of this document exists on github at: https://github.com/brong/draft-gondwana-jmap-blob/
+
+**draft-ietf-jmap-blob-12**
+
+- updates based on Neil Jenkins' feedback:
+  - fixed [] positions for type specs
+  - documented delta between /upload and /set better
+  - allowed zero-length blobId sources
+  - fixed examples with /set leftovers
+  - documented datatypes registry policy
+- added optional "digest" support
 
 **draft-ietf-jmap-blob-11**:
 
