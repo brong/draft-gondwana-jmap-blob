@@ -74,6 +74,9 @@ NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED",
 described in BCP 14 [@!RFC2119] [@!RFC8174] when, and only when,
 they appear in all capitals, as shown here.
 
+The definitions of JSON keys and datatypes in the document follow
+the conventions described in the core JMAP specification [@!RFC8620].
+
 # Addition to the Capabilities Object
 
 The capabilities object is returned as part of the JMAP Session
@@ -118,7 +121,7 @@ server capabilities and permissions for that account:
     If this value is not present or `null`, then clients SHOULD assume
     a limit of 64 items.
 
-* supportedTypeNames: `[String]|null`
+* supportedTypeNames: `String[]|null`
 
     An array of data type names that are supported for `Blob/lookup`.  If the
     server does not support lookups then this could be the empty list, not present
@@ -164,8 +167,9 @@ The following JMAP Methods are selected by the
 
 ## Blob/upload
 
-This is similar to a Foo/set from [@!RFC8620], but only has a `create` argument
-as blobs can't be updated or deleted.
+This is similar to a Foo/set from [@!RFC8620] in some ways, however blobs can't
+be updated or deleted, so only `create` is allowed in the method call, and blobs
+don't have state, so there is no `state` field present in the method response.
 
 **Parameters**
 
@@ -205,13 +209,13 @@ same way)
 Or if there is a problem with a creation, then the server will return a `notCreated`
 response with a map from the failed creationId to a `SetError` object.
 
-NOTE: Servers MUST set the `creationIds` value to the blobId returned in any successful
-Blob/upload's `created` response to allow backreferences, as that is the main purpose
-of this extensions.
+For each sucessful upload, servers MUST add an entry to the `creationIds` map
+for the request.  This allows the blob id to be used via back-reference in
+subsequent method calls.
 
 **UploadObject**
 
-* data: `[DataSourceObject]`
+* data: `DataSourceObject[]`
 
     an array of zero or more octet sources in order (zero to create an empty blob).
     The result of each of these sources is concatenated together in order to create
@@ -225,9 +229,9 @@ of this extensions.
 
 Exactly one of:
 
-* data:asText: `String|null`
+* data:asText: `String|null` (raw octets, must be UTF-8)
 
-* data:asBase64: `String|null`
+* data:asBase64: `String|null` (base64 representation of octets)
 
 or a blobId source:
 
@@ -235,14 +239,14 @@ or a blobId source:
 
 * offset: `UnsignedInt|null` (MAY be zero)
 
-* length: `UnsignedInt|null` (MUST NOT be zero)
+* length: `UnsignedInt|null` (MAY be zero)
 
 If `null` then offset is assumed to be zero.
 
 If `null` then length is the remaining octets in the blob.
 
-If the range can not be fully satisfied (i.e. extends past the
-end of the data in the blob) then the DataSourceObject is invalid
+If the range can not be fully satisfied (i.e. begins or extends past
+the end of the data in the blob) then the DataSourceObject is invalid
 and results in a notCreated response for this creation id.
 
 If the data properties have any invalid references or invalid data
@@ -387,11 +391,7 @@ Responses:
           "type": "application/octet-stream"
         }
       },
-      "updated": null,
-      "destroyed": null,
       "notCreated": null,
-      "notUpdated": null,
-      "notDestroyed": null,
       "accountId": "account1"
     },
     "S4"
@@ -407,11 +407,7 @@ Responses:
           "type": "application/octet-stream"
         }
       },
-      "updated": null,
-      "destroyed": null,
       "notCreated": null,
-      "notUpdated": null,
-      "notDestroyed": null,
       "accountId": "account1"
     },
     "CAT"
@@ -858,7 +854,7 @@ then it references that blobId.  Likewise for a Thread.
 
     The id of the account used for the call.
 
-* typeNames: `[String]`
+* typeNames: `String[]`
 
     A list of names from the "JMAP Data Types" registry.  Only names
     for which "Can reference blobs" is true may be specified, and the
@@ -869,13 +865,13 @@ then it references that blobId.  Likewise for a Thread.
     has not been requested, then the server returns an "unknownDataType"
     error.
 
-* ids: `[Id]`
+* ids: `Id[]`
 
     A list of blobId values to be looked for.
 
 **Response**
 
-* list: `[BlobInfo]`
+* list: `BlobInfo[]`
 
     A list of BlobInfo objects.
 
@@ -885,7 +881,7 @@ then it references that blobId.  Likewise for a Thread.
 
     The Blob Identifier.
 
-* matchedIds: `String[Id List]`
+* matchedIds: `String[Id[]]`
 
     A map from type name to list of Ids of that data type (e.g. the name
     "Email" maps to a list of emailIds)
@@ -1025,6 +1021,9 @@ IANA is requested to create a new registry "JMAP Data Types" with the initial co
 | EmailSubmission | No | Yes | urn:ietf:params:jmap:submission | [@RFC8621]
 | VacationResponse | No | Yes | urn:ietf:params:jmap:vacationresponse | [@RFC8621]
 | MDN | No | No | urn:ietf:params:jmap:mdn | [RFC9007]
+
+This policy for this registry is "Specification required", either an RFC or a simiarly
+stable reference document which defines a JMAP Data Type and associated capability.
 
 # Changes
 
