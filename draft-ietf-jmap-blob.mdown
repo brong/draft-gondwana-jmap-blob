@@ -2,18 +2,18 @@
     title = "JMAP Blob management extension"
     abbrev = "JMAP Blob"
     category = "std"
-    docName = "draft-ietf-jmap-blob-12"
+    docName = "draft-ietf-jmap-blob-13"
     updates = [8620]
     ipr= "trust200902"
     area = "Applications"
     workgroup = "JMAP"
     keyword = ["jmap"]
 
-    date = 2022-06-02T00:00:01Z
+    date = 2022-09-14T00:00:01Z
 
     [seriesInfo]
     name="Internet-Draft"
-    value="draft-ietf-jmap-blob-12"
+    value="draft-ietf-jmap-blob-13"
     stream="IETF"
     status="standard"
 
@@ -521,7 +521,7 @@ expensive and slower for the server.
 ### Blob/get simple example
 
 Where a blob containing the string "The quick brown fox jumped over
-the lazy dog!" has blobId `G6ec94756e3e046be78fcb33953b85b944e70673e`.
+the lazy dog." has blobId `Gc0854fb9fb03c41cce3802cb0d220529e6eef94e`.
 
 The first method call requests just the size for multiple blobs, and
 the second requests both size and a short range of the data for one
@@ -535,10 +535,12 @@ Method Calls:
     "Blob/get",
     {
       "ids" : [
-        "G6ec94756e3e046be78fcb33953b85b944e70673e",
+        "Gc0854fb9fb03c41cce3802cb0d220529e6eef94e"
         "not-a-blob"
       ],
       "properties" : [
+        "data:asText",
+        "digest:sha",
         "size"
       ]
     },
@@ -549,11 +551,13 @@ Method Calls:
     {
       "accountId" : "account1",
       "ids" : [
-        "G6ec94756e3e046be78fcb33953b85b944e70673e"
+        "Gc0854fb9fb03c41cce3802cb0d220529e6eef94e"
       ],
       "properties" : [
         "data:asText",
         "data:asBase64",
+        "digest:sha",
+        "digest:sha-256",
         "size"
       ],
       "offset" : 4,
@@ -572,8 +576,10 @@ Responses:
       "accountId": "account1",
       "list": [
         {
-          "id": "G6ec94756e3e046be78fcb33953b85b944e70673e",
-          "size": 46
+          "id": "Gc0854fb9fb03c41cce3802cb0d220529e6eef94e",
+          "data:asText": "The quick brown fox jumped over the lazy dog.",
+          "digest:sha": "wIVPufsDxBzOOALLDSIFKebu+U4=",
+          "size": 45
         }
       ],
       "notFound": [
@@ -588,10 +594,11 @@ Responses:
       "accountId": "account1",
       "list": [
         {
-          "id": "G6ec94756e3e046be78fcb33953b85b944e70673e",
+          "id": "Gc0854fb9fb03c41cce3802cb0d220529e6eef94e",
           "data:asText": "quick bro",
-          "data:asBase64": "cXVpY2sgYnJvCg==",
-          "size": 46
+          "digest:sha": "QiRAPtfyX8K6tm1iOAtZ87Xj3Ww=",
+          "digest:sha-256": "gdg9INW7lwHK6OQ9u0dwDz2ZY/gubi0En0xlFpKt0OA=",
+          "size": 45
         }
       ]
     },
@@ -1049,6 +1056,10 @@ stable reference document which defines a JMAP Data Type and associated capabili
 EDITOR: please remove this section before publication.
 
 The source of this document exists on github at: https://github.com/brong/draft-gondwana-jmap-blob/
+
+**draft-ietf-jmap-blob-13**
+
+- added examples of digest responses
 
 **draft-ietf-jmap-blob-12**
 
