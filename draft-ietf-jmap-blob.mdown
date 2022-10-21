@@ -2,18 +2,18 @@
     title = "JMAP Blob management extension"
     abbrev = "JMAP Blob"
     category = "std"
-    docName = "draft-ietf-jmap-blob-13"
+    docName = "draft-ietf-jmap-blob-14"
     updates = [8620]
     ipr= "trust200902"
     area = "Applications"
     workgroup = "JMAP"
     keyword = ["jmap"]
 
-    date = 2022-09-14T00:00:01Z
+    date = 2022-10-21T00:00:01Z
 
     [seriesInfo]
     name="Internet-Draft"
-    value="draft-ietf-jmap-blob-13"
+    value="draft-ietf-jmap-blob-14"
     stream="IETF"
     status="standard"
 
@@ -118,7 +118,7 @@ server capabilities and permissions for that account:
     If present, gives the maximum number of of DataSourceObjects allowed per
     creation in a Blob/upload.  Servers MUST allow at least 64 items.
 
-    If this value is not present or `null`, then clients SHOULD assume
+    If this value is not present or `null`, then clients MUST assume
     a limit of 64 items.
 
 * supportedTypeNames: `String[]|null`
@@ -131,7 +131,7 @@ server capabilities and permissions for that account:
 
     An array of supported digest algorithms that are supported for `Blob/get`.
     If the server does not support calculating blob digests, then this could be
-    the empty list, not present, or `null`.  Algorithms on this list *MUST* be
+    the empty list, not present, or `null`.  Algorithms on this list MUST be
     present in the HTTP Digest Alogirthms registry defined by [@!RFC3230],
     and are always lowercased.
 
@@ -978,7 +978,7 @@ and set `isEncodingProblem: true`.
 Servers MUST apply any access controls, such that if the authenticated user would
 be unable to discover the blobId by making queries, then this fact can't be
 discovered via a Blob/lookup.  For example, if an Email exists in a Mailbox which
-the authenticated user does not have access to see, then that emailId MUST not be
+the authenticated user does not have access to see, then that emailId MUST NOT be
 returned in a lookup for a blob which is referenced by that email.
 
 If a server might sometimes return all names empty rather than putting a
@@ -1050,6 +1050,10 @@ IANA is requested to create a new registry "JMAP Data Types" with the initial co
 
 This policy for this registry is "Specification required", either an RFC or a simiarly
 stable reference document which defines a JMAP Data Type and associated capability.
+
+IANA is asked to appoint designated experts to review requests for additions to this
+registry, with guidance to allow any registration which provides a stable document describing
+the capability, and control over the URI namespace where the capability URI points.
 
 # Changes
 
