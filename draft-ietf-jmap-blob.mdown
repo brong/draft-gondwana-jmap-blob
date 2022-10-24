@@ -2,18 +2,18 @@
     title = "JMAP Blob management extension"
     abbrev = "JMAP Blob"
     category = "std"
-    docName = "draft-ietf-jmap-blob-14"
+    docName = "draft-ietf-jmap-blob-15"
     updates = [8620]
     ipr= "trust200902"
     area = "Applications"
     workgroup = "JMAP"
     keyword = ["jmap"]
 
-    date = 2022-10-21T00:00:01Z
+    date = 2022-10-24T00:00:01Z
 
     [seriesInfo]
     name="Internet-Draft"
-    value="draft-ietf-jmap-blob-14"
+    value="draft-ietf-jmap-blob-15"
     stream="IETF"
     status="standard"
 
@@ -97,43 +97,40 @@ The value of this property in the JMAP session "capabilities"
 property MUST be an empty object.
 
 The value of this property in an account's "accountCapabilities"
-property is an object that MAY contain the following information on
-server capabilities and permissions for that account:
+property is an object that MUST contain the following information
+on server capabilities and permissions for that account:
 
 * maxSizeBlobSet: `UnsignedInt|null`
 
-    If present, this is the maximum size of blob (in octets) that the server
+    This is the maximum size of blob (in octets) that the server
     will allow to be created (including blobs created by concatenating
     multiple data sources together).
 
     Clients MUST NOT attempt to create blobs larger than this size.
 
-    If this value is not present or `null`, then clients are not required to
-    limit the size of blob they try to create, though servers can always
-    reject creation of blobs regardless of size; e.g. due to lack of
-    disk space, or per-user rate limits.
+    If this value is `null`, then clients are not required to limit the
+    size of blob they try to create, though servers can always reject
+    creation of blobs regardless of size; e.g. due to lack of disk space,
+    or per-user rate limits.
 
-* maxDataSources: `UnsignedInt|null`
+* maxDataSources: `UnsignedInt`
 
-    If present, gives the maximum number of of DataSourceObjects allowed per
-    creation in a Blob/upload.  Servers MUST allow at least 64 items.
+    The maximum number of of DataSourceObjects allowed per
+    creation in a Blob/upload.
 
-    If this value is not present or `null`, then clients MUST assume
-    a limit of 64 items.
+    Servers MUST allow at least 64 DataSourceObjects per creation.
 
-* supportedTypeNames: `String[]|null`
+* supportedTypeNames: `String[]`
 
     An array of data type names that are supported for `Blob/lookup`.  If the
-    server does not support lookups then this could be the empty list, not present
-    or `null`.
+    server does not support lookups then this will be the empty list.
 
-* supportedDigestAlgorithms `String[]|null`
+* supportedDigestAlgorithms `String[]`
 
     An array of supported digest algorithms that are supported for `Blob/get`.
-    If the server does not support calculating blob digests, then this could be
-    the empty list, not present, or `null`.  Algorithms on this list MUST be
-    present in the HTTP Digest Alogirthms registry defined by [@!RFC3230],
-    and are always lowercased.
+    If the server does not support calculating blob digests, then this will be
+    the empty list.  Algorithms in this list MUST be present in the HTTP Digest
+    Alogirthms registry defined by [@!RFC3230], and are always lowercased.
 
 ### Capability Example
 
@@ -1060,6 +1057,16 @@ the capability, and control over the URI namespace where the capability URI poin
 EDITOR: please remove this section before publication.
 
 The source of this document exists on github at: https://github.com/brong/draft-gondwana-jmap-blob/
+
+**draft-ietf-jmap-blob-15**
+
+- changed capabilities object to MUST contain all specified keys, to align
+  with all other published JMAP extensions.
+
+**draft-ietf-jmap-blob-14**
+
+- AD review - fixed MUST usage
+- AD review - added instructions regarding expert review for IANA
 
 **draft-ietf-jmap-blob-13**
 
