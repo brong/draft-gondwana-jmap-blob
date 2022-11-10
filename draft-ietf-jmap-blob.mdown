@@ -2,18 +2,18 @@
     title = "JMAP Blob management extension"
     abbrev = "JMAP Blob"
     category = "std"
-    docName = "draft-ietf-jmap-blob-15"
+    docName = "draft-ietf-jmap-blob-16"
     updates = [8620]
     ipr= "trust200902"
     area = "Applications"
     workgroup = "JMAP"
     keyword = ["jmap"]
 
-    date = 2022-10-24T00:00:01Z
+    date = 2022-11-10T00:00:01Z
 
     [seriesInfo]
     name="Internet-Draft"
-    value="draft-ietf-jmap-blob-15"
+    value="draft-ietf-jmap-blob-16"
     stream="IETF"
     status="standard"
 
@@ -115,7 +115,7 @@ on server capabilities and permissions for that account:
 
 * maxDataSources: `UnsignedInt`
 
-    The maximum number of of DataSourceObjects allowed per
+    The maximum number of DataSourceObjects allowed per
     creation in a Blob/upload.
 
     Servers MUST allow at least 64 DataSourceObjects per creation.
@@ -125,7 +125,7 @@ on server capabilities and permissions for that account:
     An array of data type names that are supported for `Blob/lookup`.  If the
     server does not support lookups then this will be the empty list.
 
-* supportedDigestAlgorithms `String[]`
+* supportedDigestAlgorithms: `String[]`
 
     An array of supported digest algorithms that are supported for `Blob/get`.
     If the server does not support calculating blob digests, then this will be
@@ -209,10 +209,10 @@ The `created` objects contain:
 
     as per RFC8620 - the size of the created blob in octets
 
-Plus any other properties identical to those that would be returned in the
-JSON response of the RFC8620 upload endpoint (which may be extended in
-the future - this document anticipates that implementations will
-extend both the upload endpoint and the Blob/upload responses in the
+It will also contain any other properties identical to those that would
+be returned in the JSON response of the RFC8620 upload endpoint (which may
+be extended in the future - this document anticipates that implementations
+will extend both the upload endpoint and the Blob/upload responses in the
 same way)
 
 Or if there is a problem with a creation, then the server will return a `notCreated`
@@ -267,7 +267,7 @@ Likewise, invalid characters in the base64 of data:asBase64, or invalid
 UTF-8 in data:asText MUST result in a nonCreated response.
 
 It is envisaged that the definition for DataSourceObject might be
-extended in future, for example to fetch external content.
+extended in the future, for example to fetch external content.
 
 A server MUST accept at least 64 DataSourceObjects per create, as
 described in Section 3.1 of this document.
@@ -967,6 +967,10 @@ Response:
 
 # Security considerations
 
+All security considerations of JMAP [RFC8620] apply to this specification.
+Additional considerations specific to the data types and functionality
+introduced by this document are described here.
+
 JSON parsers are not all consistent in handling non-UTF-8 data.  JMAP requires
 that all JSON data be UTF-8 encoded, so servers MUST only return a null value
 if `data:asText` is requested for a range of octets which is not valid UTF-8,
@@ -1057,6 +1061,10 @@ the capability, and control over the URI namespace where the capability URI poin
 EDITOR: please remove this section before publication.
 
 The source of this document exists on github at: https://github.com/brong/draft-gondwana-jmap-blob/
+
+**draft-ietf-jmap-blob-16**
+
+- secdir last-call review changes - nit fixes and security considerations
 
 **draft-ietf-jmap-blob-15**
 
