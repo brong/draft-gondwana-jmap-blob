@@ -2,18 +2,18 @@
     title = "JMAP Blob management extension"
     abbrev = "JMAP Blob"
     category = "std"
-    docName = "draft-ietf-jmap-blob-16"
+    docName = "draft-ietf-jmap-blob-17"
     updates = [8620]
     ipr= "trust200902"
     area = "Applications"
     workgroup = "JMAP"
     keyword = ["jmap"]
 
-    date = 2022-11-10T00:00:01Z
+    date = 2022-11-10T00:00:02Z
 
     [seriesInfo]
     name="Internet-Draft"
-    value="draft-ietf-jmap-blob-16"
+    value="draft-ietf-jmap-blob-17"
     stream="IETF"
     status="standard"
 
@@ -1061,6 +1061,10 @@ the capability, and control over the URI namespace where the capability URI poin
 EDITOR: please remove this section before publication.
 
 The source of this document exists on github at: https://github.com/brong/draft-gondwana-jmap-blob/
+
+**draft-ietf-jmap-blob-17**
+
+- AD review, one more wording nit
 
 **draft-ietf-jmap-blob-16**
 
