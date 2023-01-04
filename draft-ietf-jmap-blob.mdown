@@ -2,18 +2,18 @@
     title = "JMAP Blob management extension"
     abbrev = "JMAP Blob"
     category = "std"
-    docName = "draft-ietf-jmap-blob-17"
+    docName = "draft-ietf-jmap-blob-18"
     updates = [8620]
     ipr= "trust200902"
     area = "Applications"
     workgroup = "JMAP"
     keyword = ["jmap"]
 
-    date = 2022-11-10T00:00:02Z
+    date = 2023-01-04T00:00:01Z
 
     [seriesInfo]
     name="Internet-Draft"
-    value="draft-ietf-jmap-blob-17"
+    value="draft-ietf-jmap-blob-18"
     stream="IETF"
     status="standard"
 
@@ -176,9 +176,9 @@ The following JMAP Methods are selected by the
 
 ## Blob/upload
 
-This is similar to a Foo/set from [@!RFC8620] in some ways, however blobs can't
+This is similar to a Foo/set from [@!RFC8620] in some ways, however blobs can not
 be updated or deleted, so only `create` is allowed in the method call, and blobs
-don't have state, so there is no `state` field present in the method response.
+do not have state, so there is no `state` field present in the method response.
 
 **Parameters**
 
@@ -221,6 +221,9 @@ response with a map from the failed creationId to a `SetError` object.
 For each sucessful upload, servers MUST add an entry to the `creationIds` map
 for the request.  This allows the blob id to be used via back-reference in
 subsequent method calls.
+
+The created blob will have the same lifetime and same expiry semantics as any
+other binary object created via the mechanism specified in [!@RFC8620] section 6.
 
 **UploadObject**
 
@@ -866,10 +869,21 @@ Given a list of blobIds, this method does a reverse lookup in each of
 the provided type names to find the list of Ids within that data type
 which reference the provided blob.
 
-The definition of reference is somewhat loosely defined, but roughly
-means "you could discover this blobId by looking inside this object",
-for example if a Mailbox contains an Email which references the blobId,
-then it references that blobId.  Likewise for a Thread.
+Since different datatypes will have different semantics of "contains",
+the definition of reference is somewhat loosely defined, but roughly
+means "you could discover this blobId by looking at this object or
+at other objects recursively contained within this object".
+
+For example with an [RFC8621] server, if checking whether a Mailbox
+references a blob, then if any Emails within that Mailbox reference
+the blobId, then the Mailbox references that blobId.  For any Thread
+which references an Email that references a blobId, it can be said
+that the Thread references the blobId.
+
+But this does not mean that if an Email references a Mailbox in its
+mailboxIds property, then any blobId referenced by other Emails in
+that Mailbox are also referenced by the initial Email.
+
 
 **Parameters**
 
@@ -967,7 +981,7 @@ Response:
 
 # Security considerations
 
-All security considerations of JMAP [RFC8620] apply to this specification.
+All security considerations of JMAP [@!RFC8620] apply to this specification.
 Additional considerations specific to the data types and functionality
 introduced by this document are described here.
 
@@ -977,7 +991,7 @@ if `data:asText` is requested for a range of octets which is not valid UTF-8,
 and set `isEncodingProblem: true`.
 
 Servers MUST apply any access controls, such that if the authenticated user would
-be unable to discover the blobId by making queries, then this fact can't be
+be unable to discover the blobId by making queries, then this fact can not be
 discovered via a Blob/lookup.  For example, if an Email exists in a Mailbox which
 the authenticated user does not have access to see, then that emailId MUST NOT be
 returned in a lookup for a blob which is referenced by that email.
@@ -985,7 +999,7 @@ returned in a lookup for a blob which is referenced by that email.
 If a server might sometimes return all names empty rather than putting a
 blobId in the notFound response to a Blob/get, then the server SHOULD
 always return the same type of response, regardless of whether a blob
-exists but the user can't access it, or doesn't exist at all.  This
+exists but the user can not access it, or does not exist at all.  This
 avoids leaking information about the existence of the blob.
 
 The server MUST NOT trust that the data given to a Blob/upload is a well formed
@@ -999,6 +1013,11 @@ content on the far side of security scanners (anti-virus or exfiltration scanner
 for example) which may be watching the upload endpoint.  Server implementations
 SHOULD provide a hook to allow security scanners to check the resulting blob after
 concatenating the data sources in the same way that they do for the upload endpoint.
+
+Digest algorithms can be expensive for servers to calculate.  Servers which
+share resources between multiple users should track resource usage by clients,
+and rate-limit expensive operations to avoid resource starvation.
+
 
 # IANA considerations
 
@@ -1061,6 +1080,16 @@ the capability, and control over the URI namespace where the capability URI poin
 EDITOR: please remove this section before publication.
 
 The source of this document exists on github at: https://github.com/brong/draft-gondwana-jmap-blob/
+
+**draft-ietf-jmap-blob-18**
+
+- add security considerations for Digest algorithm performance (was supposed
+  to be in -13 but I had a commit that never got pushed)
+- artart review:
+  - clarify that created blobs behave identically to RFC8620 section 6 binary
+    objects.
+  - clearer text about "references a blob"
+  - remove contractions
 
 **draft-ietf-jmap-blob-17**
 
